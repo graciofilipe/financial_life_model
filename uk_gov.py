@@ -44,3 +44,29 @@ class TaxMan:
                 remaining_taxable_income -= taxable_in_band
 
         return tax_due
+
+    def calculate_uk_national_insurance(self, annual_pay):
+        """
+        Calculates the amount of UK National Insurance contributions due based on the provided annual pay.
+
+        Args:
+            annual_pay (float): The individual's annual earnings.
+
+        Returns:
+            float: The amount of National Insurance contributions due for the year.
+        """
+
+        # Convert annual figures to monthly equivalents
+        lower_threshold = 1048*12
+        upper_threshold = 4189*12
+        lower_rate = 0.08
+        upper_rate = 0.02
+
+        if annual_pay <= lower_threshold:
+            return 0
+        elif annual_pay <= upper_threshold:
+            annual_contribution = (annual_pay - lower_threshold) * lower_rate
+        else:
+            annual_contribution = (upper_threshold - lower_threshold) * lower_rate + (annual_pay - upper_threshold) * upper_rate
+
+        return annual_contribution

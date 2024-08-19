@@ -1,9 +1,9 @@
 
 
 class SotcksAndSharesISA:
-    def __init__(self, initial_value=0, starting_year=2024):
+    def __init__(self, initial_value=0, growth_rate=1.03):
         self.asset_value = initial_value
-        self.starting_year = start_year
+        self.growth_rate = growth_rate
 
     def put_money(self, amount):
         self.asset_value += amount
@@ -15,15 +15,16 @@ class SotcksAndSharesISA:
         else:
             return "Insufficient funds"
 
-    def grow_per_year(self, r):
-        self.asset_value *= (1 + r)
+    def grow_per_year(self):
+        self.asset_value *= self.growth_rate
 
 
 
 class PensionAccount:
-    def __init__(self, initial_value=0, starting_year=2024):
+    def __init__(self, initial_value=0, growth_rate=1.03):
         self.asset_value = initial_value
-        self.starting_year = start_year
+        self.growth_rate = growth_rate
+
 
     def put_money(self, amount):
         self.asset_value += amount
@@ -35,8 +36,8 @@ class PensionAccount:
         else:
             return "Insufficient funds"
 
-    def grow_per_year(self, r):
-        self.asset_value *= (1 + r)
+    def grow_per_year(self):
+        self.asset_value *= self.growth_rate
 
 
 

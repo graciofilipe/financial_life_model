@@ -1,8 +1,9 @@
 
 class Human:
-    def __init__(self,yearly_living_costs, employment, yearly_investment, yearly_saving, cash):
+    def __init__(self,yearly_living_costs,
+                 yearly_investment, yearly_saving, cash):
+        
         self.yearly_living_costs = yearly_living_costs
-        self.employment = employment
         self.yearly_investment = yearly_investment
         self.yearly_saving = yearly_saving
         self.cash = cash
