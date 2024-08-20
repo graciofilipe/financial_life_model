@@ -39,7 +39,7 @@ class TaxMan:
 
     def taxable_interest(self, taxable_income, gross_interest):
         interest_allowance = self.calculate_interest_allowance(taxable_income=taxable_income)
-        return gross_interest - interest_allowance
+        return max(0, gross_interest - interest_allowance)
 
 
     def pension_allowance(self, taxable_income_post_pension, individual_pension_contribution, employer_contribution):
@@ -83,21 +83,21 @@ class TaxMan:
         # basic rate
         taxable_at_basic = max(0, min(taxable_income, self.tax_bands[0]))
         basic_tax = taxable_at_basic * self.basic_rate
-        print('basic tax is ', basic_tax)
+        #print('basic tax is ', basic_tax)
         tax_due += basic_tax
         remaining_taxable_income -= taxable_at_basic
 
         # higher rate
         taxable_at_higher = max(0 , min(self.tax_bands[1] - self.tax_bands[0], remaining_taxable_income))
         higher_tax = taxable_at_higher * self.higher_rate
-        print('higher tax is ', higher_tax)
+        #print('higher tax is ', higher_tax)
         tax_due += higher_tax
         remaining_taxable_income -= taxable_at_higher
 
         # additional rate
         taxable_at_additional = max(0, remaining_taxable_income)
         additional_tax = taxable_at_additional * self.additional_rate
-        print('additional tax is ', additional_tax)
+        #print('additional tax is ', additional_tax)
         tax_due += additional_tax
 
             
@@ -131,5 +131,5 @@ class TaxMan:
         else:
             annual_contribution = (upper_threshold - lower_threshold) * lower_rate + (annual_pay - upper_threshold) * upper_rate
 
-        print('NI due is ', annual_contribution)
+        #print('NI due is ', annual_contribution)
         return annual_contribution
