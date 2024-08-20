@@ -1,7 +1,60 @@
 
 class TaxMan:
     def __init__(self):
-        pass
+        self.tax_bands = [37700, 125140]
+        self.basic_rate = 0.2
+        self.higher_rate = 0.40
+        self.additional_rate = 0.45
+        self.personal_allowance = 12570
+        self.personal_allowance_limit = 100000
+        self.basic_rate_interest_allowance = 1000
+        self.higher_rate_interest_allowance = 500
+        self.additional_rate_interest_allowance = 0
+        self.capital_gains_tax_allowance = 3000
+        self.capital_gains_tax_rate = 0.2
+
+
+    def capital_gains_tax_due(self, capital_gains):
+        taxable_gains = max(0, capital_gains - self.capital_gains_tax_allowance)
+        return taxable_gains * self.capital_gains_tax_rate
+
+
+
+    def calculate_tax_band(self, taxable_income):
+        if taxable_income <= self.tax_bands[0]:
+            return "basic rate"
+        elif taxable_income >= self.tax_bands[1]:
+            return "additional rate"
+        else:
+            return "higher rate"
+
+    def calculate_interest_allowance(self, taxable_income):
+        tax_band = self.calculate_tax_band(taxable_income)
+        if tax_band == "basic rate":
+            return self.basic_rate_interest_allowance
+        elif tax_band == "higher rate":
+            return self.higher_rate_interest_allowance
+        else:
+            return self.additional_rate_interest_allowance
+
+    def taxable_interest(self, taxable_income, gross_interest):
+        interest_allowance = self.calculate_interest_allowance(taxable_income=taxable_income)
+        return gross_interest - interest_allowance
+
+
+    def pension_allowance(self, taxable_income_post_pension, individual_pension_contribution, employer_contribution):
+        threshold_income = taxable_income_post_pension + individual_pension_contribution
+        adjusted_income = taxable_income_post_pension + individual_pension_contribution + employer_contribution
+        
+        #tapered_allowance 
+        if threshold_income < 200000:
+            tapered_allowance = 60000
+        else:
+            tapered_allowance = min(max(10000, 60000 - (adjusted_income - 260000)/2), 60000)
+
+        return tapered_allowance
+
+
 
     def calculate_uk_income_tax(self, gross_income):
         """
@@ -14,35 +67,44 @@ class TaxMan:
             float: The amount of income tax due.
         """
 
-        # Personal Allowance
-        personal_allowance = 12570
-
+        personal_allowance = self.personal_allowance
         # Check if Personal Allowance is reduced due to high income
-        if gross_income > 100000:
-            personal_allowance_reduction = (gross_income - 100000) / 2
-            personal_allowance = max(0, personal_allowance - personal_allowance_reduction)
+        if gross_income > self.personal_allowance_limit:
+            personal_allowance_reduction = (gross_income - self.personal_allowance_limit) / 2
+            personal_allowance = max(0, self.personal_allowance - personal_allowance_reduction)
 
         # Taxable income
         taxable_income = max(0, gross_income - personal_allowance)
 
-        # Tax bands and rates
-        tax_bands = [
-            (0, 0.0),        # Personal Allowance
-            (50270, 0.2),     # Basic rate
-            (125140, 0.4),    # Higher rate
-            (float('inf'), 0.45)  # Additional rate
-        ]
-
-        # Calculate tax due
+        ## Calculate tax due
         tax_due = 0
         remaining_taxable_income = taxable_income
+        
+        # basic rate
+        taxable_at_basic = max(0, min(taxable_income, self.tax_bands[0]))
+        basic_tax = taxable_at_basic * self.basic_rate
+        print('basic tax is ', basic_tax)
+        tax_due += basic_tax
+        remaining_taxable_income -= taxable_at_basic
 
-        for upper_limit, tax_rate in tax_bands:
-            if remaining_taxable_income > 0:
-                taxable_in_band = min(remaining_taxable_income, upper_limit - (tax_bands[tax_bands.index((upper_limit, tax_rate)) - 1][0] if tax_bands.index((upper_limit, tax_rate)) > 0 else 0))
-                tax_due += taxable_in_band * tax_rate
-                remaining_taxable_income -= taxable_in_band
+        # higher rate
+        taxable_at_higher = max(0 , min(self.tax_bands[1] - self.tax_bands[0], remaining_taxable_income))
+        higher_tax = taxable_at_higher * self.higher_rate
+        print('higher tax is ', higher_tax)
+        tax_due += higher_tax
+        remaining_taxable_income -= taxable_at_higher
 
+        # additional rate
+        taxable_at_additional = max(0, remaining_taxable_income)
+        additional_tax = taxable_at_additional * self.additional_rate
+        print('additional tax is ', additional_tax)
+        tax_due += additional_tax
+
+            
+
+
+
+        print('tax due is ', tax_due)
         return tax_due
 
     def calculate_uk_national_insurance(self, annual_pay):
@@ -69,4 +131,5 @@ class TaxMan:
         else:
             annual_contribution = (upper_threshold - lower_threshold) * lower_rate + (annual_pay - upper_threshold) * upper_rate
 
+        print('NI due is ', annual_contribution)
         return annual_contribution

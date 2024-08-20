@@ -14,8 +14,9 @@ class Human:
     def get_from_cash(self, ammount_to_get):
         if ammount_to_get <= self.cash:
             self.cash -= ammount_to_get
+            return ammount_to_get
         else:
-            return "Insufficient funds"
+            raise Exception("Insufficient funds")
 
 
     def put_in_GIA(self, ammount_to_invest, GIA_object):
@@ -30,7 +31,19 @@ class Human:
 class Employment:
     def __init__(self, gross_salary):
         self.gross_salary = gross_salary
+        self.employee_pension_contributions = 0.12
+        self.employer_pension_contributions = 0.07
     
+    def get_salary(self):
+        return self.gross_salary - self.gross_salary*self.employee_pension_contributions
+
     def get_gross_salary(self):
         return self.gross_salary
+
+    def get_employee_pension_contributions(self):
+        return self.employee_pension_contributions
+    
+    def get_employer_pension_contributions(self):
+        return self.employer_pension_contributions
+
 
