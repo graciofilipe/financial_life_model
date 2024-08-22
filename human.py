@@ -1,18 +1,28 @@
+import logging
+
 
 class Human:
-    def __init__(self, starting_cash, living_costs):
+    def __init__(self, starting_cash, living_costs, pension_draw_down_function):
         self.cash = starting_cash
         self.living_costs = living_costs
+        self.pension_draw_down_function = pension_draw_down_function
+        self.utility = []
     
+    def buy_utility(self, ammount):
+        self.utility.append(ammount)
+        self.cash -= ammount
+
+
+
     def put_in_cash(self, ammount_to_add):
         self.cash += ammount_to_add
 
     def get_from_cash(self, ammount_to_get):
-        if ammount_to_get <= self.cash:
-            self.cash -= ammount_to_get
-            return ammount_to_get
-        else:
-            raise Exception("Insufficient funds")
+        self.cash -= ammount_to_get
+        if self.cash < 0:
+            logging.warning(msg=f"Cash is negative: {self.cash}")
+        return ammount_to_get
+
 
 
 class Employment:

@@ -100,12 +100,9 @@ class TaxMan:
         #print('additional tax is ', additional_tax)
         tax_due += additional_tax
 
-            
-
-
-
-        print('tax due is ', tax_due)
         return tax_due
+
+
 
     def calculate_uk_national_insurance(self, annual_pay):
         """

@@ -1,117 +1,221 @@
-from human import Human, Employment
+from human import Employment, Human
 from uk_gov import TaxMan
 from investments_and_savings import PensionAccount, SotcksAndSharesISA, GeneralInvestmentAccount, FixedInterest
-from setup_world import generate_living_costs, generate_salary
+from setup_world import generate_living_costs, generate_salary, linear_pension_draw_down_function
+import pandas as pd
+
+def get_last_element_or_zero(my_list):
+  """Returns the last element of a list, or 0 if the list is empty."""
+  if my_list:
+    return my_list[-1]
+  else:
+    return 0
 
 
+years = range(2024, 2074)
+taxable_salary_list = []
+gross_interest_list = []
+taxable_interest_list = []
+capital_gains_list = []
+capital_gains_tax_list = []
+pension_allowance_list = []
+pension_pay_over_allowance_list = []
+taken_from_pension_list = []
+total_taxable_income_list = []
+income_tax_due_list = []
+national_insurance_due_list = []
+all_tax_list = []
+salary_after_tax_list = []
+cash_list = []
+pension_allowance_list
+pension_list = []
+ISA_list = []
+GIA_list = [] 
+living_costs_list = []
+ammount_needed_from_gia_list = []
 
+retirement_year = 2054
+final_year = 2074
+file_name = "simulation"
 
 
 if __name__ == "__main__":
 
     ## set up my world ##
-
     my_employment = Employment(gross_salary=generate_salary())
-    my_fixed_interest = FixedInterest(initial_value=20000, interest_rate=0.02)
+    my_fixed_interest = FixedInterest(initial_value=1000, interest_rate=0.02)
     my_NSI = FixedInterest(initial_value=50000, interest_rate=0.02)
-    my_pension = PensionAccount(initial_value=100000, growth_rate=0.03, pension_draw_down)
+    my_pension = PensionAccount(initial_value=100000, growth_rate=0.03)
     my_ISA = SotcksAndSharesISA(initial_value=100000, growth_rate=0.03)
     my_gia = GeneralInvestmentAccount(initial_value=100000, growth_rate=0.03)
 
 
-    filipe = Human(starting_cash=10000, living_costs=generate_living_costs())
+    filipe = Human(starting_cash=10000,
+                   living_costs=generate_living_costs(), 
+                   pension_draw_down_function=linear_pension_draw_down_function)
 
     hmrc = TaxMan()
     CGT_strategy = "harvest"
 
-    for year in range(2024, 2074):
-        print('for year ', year)
+    for year in years:
                 
-        ## get paid
-        taxable_salary = my_employment.get_salary(year)
-        print('taxable salary is ', taxable_salary)
+        ## MY INCOME ##
         
+        # get paid
+        taxable_salary = my_employment.get_salary(year)
+        # not putting this in cash, because I actually recieve this after the tax is taken
+
+
         # get UK gross interest
         gross_interest = my_fixed_interest.pay_interest() 
-        print('gross interest is ', gross_interest)
+        
         nsi_interest = my_NSI.pay_interest()
         taxable_interest = hmrc.taxable_interest(taxable_income=taxable_salary, gross_interest=gross_interest)
-        print('taxable interest is ', taxable_interest)
         
+        filipe.put_in_cash(nsi_interest)
+        filipe.put_in_cash(gross_interest)
+
         # get UK dividends # TODO: tax dividends
         dividends = 200
 
-        # INVESTMENTS 
+        # INVESTMENT GROWTH
         my_ISA.grow_per_year()
-        unrealised_capital_gains = my_gia.grow_per_year()
-        if CGT_strategy == "harvest":
-            capital_gains = unrealised_capital_gains
-            capital_gains_tax = hmrc.capital_gains_tax_due(capital_gains)
-            print('capital gains tax is ', capital_gains_tax)
-        elif CGT_strategy == "let_grow":
-            capital_gains_tax = 0
+        my_gia.grow_per_year()
+        my_pension.grow_per_year()
+    
+             
 
-        money_for_ISA = filipe.get_from_cash(2000)
+        ## income into pension from salary ##
+        total_pension_contributions =  my_employment.get_employee_pension_contributions(year) + \
+             my_employment.get_employer_pension_contributions(year)
+        my_pension.put_money(total_pension_contributions)
+
+
+        # pension draw down (need to do this before tax because pension income is taxable)
+        amount_to_take_from_pension_pot = filipe.pension_draw_down_function(pot_value=my_pension.asset_value,
+                                                                                   current_year=year,
+                                                                                   retirement_year=retirement_year,
+                                                                                   final_year=final_year)
+        taken_from_pension = my_pension.get_money(amount_to_take_from_pension_pot)
+        filipe.put_in_cash(taken_from_pension)
+
+        ## Calculate TAXES ##
+        if year == retirement_year:
+            taxable_pension_income = 0
+        else:
+            taxable_pension_income = taken_from_pension
+        # pension allowance
+        pension_allowance = hmrc.pension_allowance(taxable_income_post_pension=taxable_salary + taxable_interest,
+                                                   individual_pension_contribution=my_employment.get_employee_pension_contributions(year),
+                                                   employer_contribution=my_employment.get_employer_pension_contributions(year))
+        pension_pay_over_allowance = max(0, total_pension_contributions - pension_allowance)
+
+        total_taxable_income = taxable_salary + taxable_interest + pension_pay_over_allowance + taxable_pension_income
+
+        income_tax_due = hmrc.calculate_uk_income_tax(total_taxable_income)
+
+        ni_due = hmrc.calculate_uk_national_insurance(taxable_salary+ my_employment.get_employee_pension_contributions(year))
+               
+        salary_after_tax = taxable_salary - income_tax_due - ni_due
+        # NOW I CAN PUT THIS IN CASH before paying things ##
+        filipe.put_in_cash(salary_after_tax)
+        
+
+        # CAPITAL GAINS (and accessing GIA if I need it for other reasons)
+        desired_buffer_in_cash = (filipe.living_costs[year]*1.5 + get_last_element_or_zero(capital_gains_tax_list))
+        amount_needed_from_gia = max(desired_buffer_in_cash - filipe.cash, 0)
+
+        if amount_needed_from_gia <= 0:
+            if CGT_strategy == "harvest":
+                gia_money, capital_gains = my_gia.get_money(my_gia.asset_value-1)
+                my_gia.put_money(gia_money)
+                capital_gains_tax = hmrc.capital_gains_tax_due(capital_gains)
+
+            elif CGT_strategy == "let_grow":
+                capital_gains = 0
+                capital_gains_tax = 0
+        
+        elif amount_needed_from_gia > 0:
+            if CGT_strategy == "harvest":
+                gia_money, capital_gains = my_gia.get_money(my_gia.asset_value-1)
+                my_gia.put_money(gia_money - amount_needed_from_gia)
+                capital_gains_tax = hmrc.capital_gains_tax_due(capital_gains)
+
+            elif CGT_strategy == "let_grow":
+                extra_cash, capital_gains = my_gia.get_money(amount_needed_from_gia)
+                filipe.put_in_cash(extra_cash)
+                capital_gains_tax = hmrc.capital_gains_tax_due(capital_gains)
+
+        filipe.put_in_cash(amount_needed_from_gia)
+        _ = filipe.get_from_cash(capital_gains_tax)
+        
+        #### pay my living costs
+        filipe.get_from_cash(filipe.living_costs[year])
+        
+        
+        ## AFTER I PAY TAXES AND LIVING EXPENSES, I INVEST OR BUY UTILITY ##
+        filipe.buy_utility(max(0,filipe.cash*2 - 20000))
+
+    
+
+        # INVEST FOR NEXT YEAR #
+        money_for_ISA = filipe.get_from_cash(min(20000, max(filipe.cash - desired_buffer_in_cash, 0)))
         my_ISA.put_money(money_for_ISA)
-        money_for_gia = filipe.get_from_cash(2000)
+        money_for_gia = filipe.get_from_cash(0.5*(max(0, filipe.cash - desired_buffer_in_cash)))
         my_gia.put_money(money_for_gia)
 
         
-
-        ## PENSIONS ##
-        total_pension_contributions =  my_employment.get_employee_pension_contributions(year) + \
-             my_employment.get_employer_pension_contributions(year)
-        print('total pension contributions is ', total_pension_contributions)
-                
-        # allowance
-        pension_allowance = hmrc.pension_allowance(taxable_income_post_pension=salary + taxable_interest,
-                                                   individual_pension_contribution=my_employment.get_employee_pension_contributions(year),
-                                                   employer_contribution=my_employment.get_employer_pension_contributions(year))
-
-        print('pension allowance is ', pension_allowance)
-
-        pension_pay_over_allowance = max(0, total_pension_contributions - pension_allowance)
-        print('pension_pay_over_allowance allowance is ', pension_pay_over_allowance)
-
-        
-        ## updates to pension pot
-        my_pension.grow_per_year()
-        my_pension.put_money(total_pension_contributions)
-        
-
-        ## PAY TAXES ##
-        total_taxable_income = taxable_salary + taxable_interest + pension_pay_over_allowance
-        print('total taxable income is ', total_taxable_income)
-
-        tax_due = hmrc.calculate_uk_income_tax(total_taxable_income)
-        print('tax due is ', tax_due)
+        # LOG VALUES
+        cash_list.append(filipe.cash)
+        ammount_needed_from_gia_list.append(amount_needed_from_gia)
+        pension_list.append(my_pension.asset_value)
+        ISA_list.append(my_ISA.asset_value)
+        GIA_list.append(my_gia.asset_value)
+        all_tax_list.append(ni_due + income_tax_due + capital_gains_tax)
+        capital_gains_list.append(capital_gains)
+        capital_gains_tax_list.append(capital_gains_tax)
+        taxable_salary_list.append(taxable_salary)
+        gross_interest_list.append(gross_interest)
+        taxable_interest_list.append(taxable_interest)
+        pension_allowance_list.append(pension_allowance)
+        pension_pay_over_allowance_list.append(pension_pay_over_allowance)
+        taken_from_pension_list.append(taken_from_pension)
+        total_taxable_income_list.append(total_taxable_income)
+        income_tax_due_list.append(income_tax_due)
+        national_insurance_due_list.append(ni_due)
+        salary_after_tax_list.append(salary_after_tax)
+        living_costs_list.append(filipe.living_costs[year])
 
 
-        ni_due = hmrc.calculate_uk_national_insurance(taxable_salary+ my_employment.get_employee_pension_contributions(year))
-        print(f'NI due is {ni_due}')
+    print('TOTAL UTILITY ,' , sum(filipe.utility))
 
-        all_tax = ni_due + tax_due + capital_gains_tax
-        print('all tax is ', all_tax)
-        
-        salary_after_tax = salary - all_tax
-        print('salary after tax is ', salary_after_tax)
+    df = pd.DataFrame({
+        'Taxable Salary': taxable_salary_list,
+        'Gross Interest': gross_interest_list,
+        'Taxable Interest': taxable_interest_list,
+        'Capital Gains': capital_gains_list,
+        'Capital Gains Tax': capital_gains_tax_list,
+        'Pension Allowance': pension_allowance_list,
+        'Pension Pay Over Allowance': pension_pay_over_allowance_list,
+        'Taken from Pension Pot': taken_from_pension_list,
+        'Total Taxable Income': total_taxable_income_list,
+        'Income Tax Due': income_tax_due_list,
+        'National Insurance Due': national_insurance_due_list,
+        'Total Tax': all_tax_list,
+        'Amount Needed from GIA': ammount_needed_from_gia_list,
+        'Living Costs': living_costs_list,
+        'Salary After Tax': salary_after_tax_list,
+        'Cash': cash_list,
+        'Pension': pension_list,
+        'ISA': ISA_list,
+        'GIA': GIA_list,
+        'Utility': filipe.utility
+    }, index=years)
 
-
-        ## PAY EXPENSES ##
-        amount_needed_from_gia = max(filipe.living_costs[year]*1.5 - filipe.cash, 0)
-        print('amount needed from gia is ', amount_needed_from_gia)
-        extra_cash = my_gia.get_money(amount_needed_from_gia)
-        filipe.put_in_cash(extra_cash)
-        filipe.get_from_cash(filipe.living_costs[year])
-        filipe.put_in_cash(salary_after_tax)
-
-
-
-        print('your cash is: ', round(filipe.cash))
-        print('your pension is: ', round(my_pension.asset_value))
-        print('your ISA is: ', round(my_ISA.asset_value))
-        print('your GIA is: ', round(my_gia.asset_value))
-
-        print('\n')
+    import plotly.express as px
+    fig = px.line(df, x=df.index, y=df.columns, title='Financial Simulation')
+    fig.update_xaxes(title_text='Year')
+    fig.update_yaxes(title_text='Value')
+    fig.write_html(f"{file_name}.html")
 
 
