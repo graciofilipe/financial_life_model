@@ -5,6 +5,8 @@ from setup_world import generate_living_costs, generate_salary, linear_pension_d
 import pandas as pd
 import argparse
 import os
+from datetime import datetime
+
 
 
 
@@ -40,7 +42,6 @@ ammount_needed_from_gia_list = []
 
 retirement_year = 2054
 final_year = 2074
-file_name = "simulation"
 
 
 if __name__ == "__main__":
@@ -57,9 +58,9 @@ if __name__ == "__main__":
     my_employment = Employment(gross_salary=generate_salary())
     my_fixed_interest = FixedInterest(initial_value=1000, interest_rate=0.02)
     my_NSI = FixedInterest(initial_value=50000, interest_rate=0.02)
-    my_pension = PensionAccount(initial_value=100000, growth_rate=0.03)
+    my_pension = PensionAccount(initial_value=100000+1000, growth_rate=0.03)
     my_ISA = SotcksAndSharesISA(initial_value=100000, growth_rate=0.03)
-    my_gia = GeneralInvestmentAccount(initial_value=100000, growth_rate=0.03)
+    my_gia = GeneralInvestmentAccount(initial_value=100000-1000, growth_rate=0.03)
 
 
     filipe = Human(starting_cash=10000,
@@ -228,7 +229,6 @@ if __name__ == "__main__":
     fig = px.line(df, x=df.index, y=df.columns, title='Financial Simulation')
     fig.update_xaxes(title_text='Year')
     fig.update_yaxes(title_text='Value')
-    #fig.write_html(f"{file_name}.html")
     from google.cloud import storage
 
     import plotly.express as px
@@ -237,17 +237,13 @@ if __name__ == "__main__":
     fig.update_yaxes(title_text='Value')
     
     # Write to GCS
-    file_name = 'simulation.html'
-
+    file_name = f'favour_pension_{datetime.now().strftime("%Y%m%d_%H%M%S")}.html'
     storage_client = storage.Client()
     bucket = storage_client.bucket(bucket_name)
     blob = bucket.blob(file_name)
-    
     fig.write_html(f"/tmp/{file_name}")
     blob.upload_from_filename(f"/tmp/{file_name}")
-
     print(f"HTML file uploaded to gs://{bucket_name}/{file_name}")
 
     
-
 
