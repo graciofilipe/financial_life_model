@@ -3,6 +3,10 @@ from uk_gov import TaxMan
 from investments_and_savings import PensionAccount, SotcksAndSharesISA, GeneralInvestmentAccount, FixedInterest
 from setup_world import generate_living_costs, generate_salary, linear_pension_draw_down_function
 import pandas as pd
+import argparse
+import os
+
+
 
 def get_last_element_or_zero(my_list):
   """Returns the last element of a list, or 0 if the list is empty."""
@@ -40,6 +44,14 @@ file_name = "simulation"
 
 
 if __name__ == "__main__":
+
+
+    # get the project id from environment variable: 
+    project_id = os.environ.get('PROJECT_ID')
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--bucket_name", required=True)
+    args = parser.parse_args()
+    bucket_name = args.bucket_name
 
     ## set up my world ##
     my_employment = Employment(gross_salary=generate_salary())
@@ -216,6 +228,26 @@ if __name__ == "__main__":
     fig = px.line(df, x=df.index, y=df.columns, title='Financial Simulation')
     fig.update_xaxes(title_text='Year')
     fig.update_yaxes(title_text='Value')
-    fig.write_html(f"{file_name}.html")
+    #fig.write_html(f"{file_name}.html")
+    from google.cloud import storage
+
+    import plotly.express as px
+    fig = px.line(df, x=df.index, y=df.columns, title='Financial Simulation')
+    fig.update_xaxes(title_text='Year')
+    fig.update_yaxes(title_text='Value')
+    
+    # Write to GCS
+    file_name = 'simulation.html'
+
+    storage_client = storage.Client()
+    bucket = storage_client.bucket(bucket_name)
+    blob = bucket.blob(file_name)
+    
+    fig.write_html(f"/tmp/{file_name}")
+    blob.upload_from_filename(f"/tmp/{file_name}")
+
+    print(f"HTML file uploaded to gs://{bucket_name}/{file_name}")
+
+    
 
 
