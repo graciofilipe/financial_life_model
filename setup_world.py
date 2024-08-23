@@ -4,6 +4,7 @@ def generate_living_costs():
     return {**d1, **d2}
 
 
+
 def generate_salary():
     return {year: 180000*(1.005)**idx  for idx, year in enumerate(range(2024, 2054))}
 

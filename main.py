@@ -2,23 +2,18 @@ from human import Employment, Human
 from uk_gov import TaxMan
 from investments_and_savings import PensionAccount, SotcksAndSharesISA, GeneralInvestmentAccount, FixedInterest
 from setup_world import generate_living_costs, generate_salary, linear_pension_draw_down_function
+import logging
 import pandas as pd
 import argparse
 import os
 from datetime import datetime
+from aux_funs import get_last_element_or_zero
+import plotly.express as px
+from google.cloud import storage
 
 
 
 
-def get_last_element_or_zero(my_list):
-  """Returns the last element of a list, or 0 if the list is empty."""
-  if my_list:
-    return my_list[-1]
-  else:
-    return 0
-
-
-years = range(2024, 2074)
 taxable_salary_list = []
 gross_interest_list = []
 taxable_interest_list = []
@@ -31,7 +26,7 @@ total_taxable_income_list = []
 income_tax_due_list = []
 national_insurance_due_list = []
 all_tax_list = []
-salary_after_tax_list = []
+income_after_tax_list = []
 cash_list = []
 pension_allowance_list
 pension_list = []
@@ -39,40 +34,67 @@ ISA_list = []
 GIA_list = [] 
 living_costs_list = []
 ammount_needed_from_gia_list = []
+TOTAL_ASSETS_list = []
 
-retirement_year = 2054
-final_year = 2074
+
+
 
 
 if __name__ == "__main__":
-
 
     # get the project id from environment variable: 
     project_id = os.environ.get('PROJECT_ID')
     parser = argparse.ArgumentParser()
     parser.add_argument("--bucket_name", required=True)
+    parser.add_argument("--start_year", required=False, default=2024)
+    parser.add_argument("--final_year", required=False, default=2074)
+    parser.add_argument("--retirement_year", required=False, default=2054)
+    
+    parser.add_argument("--starting_cash", required=False, default=10000)
+    
+    parser.add_argument("--fixed_interest_capital", required=False, default=1000)
+    parser.add_argument("--fixed_interest_rate", required=False, default=0.02)
+
+    parser.add_argument("--NSI_capital", required=False, default=50000)
+    parser.add_argument("--NSI_interest_rate", required=False, default=0.02)
+
+    parser.add_argument("--pension_capital", required=False, default=50000)
+    parser.add_argument("--pension_growth_rate", required=False, default=0.03)
+
+    parser.add_argument("--ISA_capital", required=False, default=150000)
+    parser.add_argument("--ISA_growth_rate", required=False, default=0.03)
+
+    parser.add_argument("--GIA_capital", required=False, default=250000)
+    parser.add_argument("--GIA_growth_rate", required=False, default=0.03)
+
+    parser.add_argument("--CG_strategy", required=False, default="harvest")
+
+    parser.add_argument("--buffer_multiplier", required=False, default=1.1)
+
+    parser.add_argument("--utility_multiplier", required=False, default=1)
+
+
+
     args = parser.parse_args()
     bucket_name = args.bucket_name
 
     ## set up my world ##
     my_employment = Employment(gross_salary=generate_salary())
-    my_fixed_interest = FixedInterest(initial_value=1000, interest_rate=0.02)
-    my_NSI = FixedInterest(initial_value=50000, interest_rate=0.02)
-    my_pension = PensionAccount(initial_value=100000+1000, growth_rate=0.03)
-    my_ISA = SotcksAndSharesISA(initial_value=100000, growth_rate=0.03)
-    my_gia = GeneralInvestmentAccount(initial_value=100000-1000, growth_rate=0.03)
+    my_fixed_interest = FixedInterest(initial_value=args.fixed_interest_capital, interest_rate=args.fixed_interest_rate)
+    my_NSI = FixedInterest(initial_value=args.NSI_capital, interest_rate=args.NSI_interest_rate)
+    my_pension = PensionAccount(initial_value=args.pension_capital, growth_rate=args.pension_growth_rate)
+    my_ISA = SotcksAndSharesISA(initial_value=args.ISA_capital, growth_rate=args.ISA_growth_rate)
+    my_gia = GeneralInvestmentAccount(initial_value=args.GIA_capital, growth_rate=args.GIA_growth_rate)
 
 
-    filipe = Human(starting_cash=10000,
+    filipe = Human(starting_cash=args.starting_cash,
                    living_costs=generate_living_costs(), 
                    pension_draw_down_function=linear_pension_draw_down_function)
 
     hmrc = TaxMan()
-    CGT_strategy = "harvest"
-
-    for year in years:
+    
+    for year in range(args.start_year, args.final_year):
                 
-        ## MY INCOME ##
         
         # get paid
         taxable_salary = my_employment.get_salary(year)
@@ -107,13 +129,13 @@ if __name__ == "__main__":
         # pension draw down (need to do this before tax because pension income is taxable)
         amount_to_take_from_pension_pot = filipe.pension_draw_down_function(pot_value=my_pension.asset_value,
                                                                                    current_year=year,
-                                                                                   retirement_year=retirement_year,
-                                                                                   final_year=final_year)
+                                                                                   retirement_year=args.retirement_year,
+                                                                                   final_year=args.final_year)
         taken_from_pension = my_pension.get_money(amount_to_take_from_pension_pot)
-        filipe.put_in_cash(taken_from_pension)
+        #filipe.put_in_cash(taken_from_pension)
 
         ## Calculate TAXES ##
-        if year == retirement_year:
+        if year == args.retirement_year:
             taxable_pension_income = 0
         else:
             taxable_pension_income = taken_from_pension
@@ -129,32 +151,43 @@ if __name__ == "__main__":
 
         ni_due = hmrc.calculate_uk_national_insurance(taxable_salary+ my_employment.get_employee_pension_contributions(year))
                
-        salary_after_tax = taxable_salary - income_tax_due - ni_due
-        # NOW I CAN PUT THIS IN CASH before paying things ##
-        filipe.put_in_cash(salary_after_tax)
+        income_after_tax = taxable_salary + taken_from_pension - income_tax_due - ni_due
         
+        # NOW I CAN PUT THIS IN CASH before paying things ##
+        filipe.put_in_cash(income_after_tax)
+        
+       
+        utility_desired = min(my_ISA.asset_value+my_gia.asset_value, min(100000, income_after_tax*args.utility_multiplier))
 
         # CAPITAL GAINS (and accessing GIA if I need it for other reasons)
-        desired_buffer_in_cash = (filipe.living_costs[year]*1.5 + get_last_element_or_zero(capital_gains_tax_list))
-        amount_needed_from_gia = max(desired_buffer_in_cash - filipe.cash, 0)
+        desired_buffer_in_cash = (filipe.living_costs[year]*args.buffer_multiplier + get_last_element_or_zero(capital_gains_tax_list))
+        
+        amount_needed = max(desired_buffer_in_cash  + utility_desired - filipe.cash, 0)
 
+        amount_needed_from_gia = min(my_gia.asset_value, amount_needed)
+        amount_needed_from_elsewhere = max(0, amount_needed - amount_needed_from_gia)
+        
+        if amount_needed_from_elsewhere > 0:
+            isa_money = my_ISA.get_money(amount=amount_needed_from_elsewhere)
+            filipe.put_in_cash(isa_money)
+        
         if amount_needed_from_gia <= 0:
-            if CGT_strategy == "harvest":
+            if args.CG_strategy == "harvest" and my_gia.asset_value > 1:
                 gia_money, capital_gains = my_gia.get_money(my_gia.asset_value-1)
                 my_gia.put_money(gia_money)
                 capital_gains_tax = hmrc.capital_gains_tax_due(capital_gains)
 
-            elif CGT_strategy == "let_grow":
+            elif args.CG_strategy == "let_grow":
                 capital_gains = 0
                 capital_gains_tax = 0
         
-        elif amount_needed_from_gia > 0:
-            if CGT_strategy == "harvest":
+        elif amount_needed_from_gia > 1:
+            if args.CG_strategy == "harvest" and my_gia.asset_value > 1:
                 gia_money, capital_gains = my_gia.get_money(my_gia.asset_value-1)
                 my_gia.put_money(gia_money - amount_needed_from_gia)
                 capital_gains_tax = hmrc.capital_gains_tax_due(capital_gains)
 
-            elif CGT_strategy == "let_grow":
+            elif args.CG_strategy == "let_grow":
                 extra_cash, capital_gains = my_gia.get_money(amount_needed_from_gia)
                 filipe.put_in_cash(extra_cash)
                 capital_gains_tax = hmrc.capital_gains_tax_due(capital_gains)
@@ -162,22 +195,30 @@ if __name__ == "__main__":
         filipe.put_in_cash(amount_needed_from_gia)
         _ = filipe.get_from_cash(capital_gains_tax)
         
+    
+    
         #### pay my living costs
         filipe.get_from_cash(filipe.living_costs[year])
         
         
-        ## AFTER I PAY TAXES AND LIVING EXPENSES, I INVEST OR BUY UTILITY ##
-        filipe.buy_utility(max(0,filipe.cash*2 - 20000))
 
+        ## AFTER I PAY TAXES AND LIVING EXPENSES, I INVEST OR BUY UTILITY ##
+        # I can't buy more utility than I have in ISA AND GIA combined and I don't want to buy more than 100k
+        filipe.buy_utility(utility_desired)
     
 
         # INVEST FOR NEXT YEAR #
         money_for_ISA = filipe.get_from_cash(min(20000, max(filipe.cash - desired_buffer_in_cash, 0)))
-        my_ISA.put_money(money_for_ISA)
+        if money_for_ISA > 1:
+            my_ISA.put_money(money_for_ISA)
+        
         money_for_gia = filipe.get_from_cash(0.5*(max(0, filipe.cash - desired_buffer_in_cash)))
-        my_gia.put_money(money_for_gia)
+        if money_for_gia > 1:
+            my_gia.put_money(money_for_gia)
 
         
+        total_assets = my_pension.asset_value + my_ISA.asset_value + my_gia.asset_value + filipe.cash
+
         # LOG VALUES
         cash_list.append(filipe.cash)
         ammount_needed_from_gia_list.append(amount_needed_from_gia)
@@ -196,11 +237,13 @@ if __name__ == "__main__":
         total_taxable_income_list.append(total_taxable_income)
         income_tax_due_list.append(income_tax_due)
         national_insurance_due_list.append(ni_due)
-        salary_after_tax_list.append(salary_after_tax)
+        income_after_tax_list.append(income_after_tax)
         living_costs_list.append(filipe.living_costs[year])
+        TOTAL_ASSETS_list.append(total_assets)
 
 
-    print('TOTAL UTILITY ,' , sum(filipe.utility))
+
+    print('TOTAL UTILITY ,' , round(sum(filipe.utility)))
 
     df = pd.DataFrame({
         'Taxable Salary': taxable_salary_list,
@@ -217,27 +260,22 @@ if __name__ == "__main__":
         'Total Tax': all_tax_list,
         'Amount Needed from GIA': ammount_needed_from_gia_list,
         'Living Costs': living_costs_list,
-        'Salary After Tax': salary_after_tax_list,
+        'Income After Tax': income_after_tax_list,
         'Cash': cash_list,
         'Pension': pension_list,
         'ISA': ISA_list,
         'GIA': GIA_list,
-        'Utility': filipe.utility
-    }, index=years)
+        'Utility': filipe.utility,
+        'Total Assets': TOTAL_ASSETS_list
+    }, index=range(args.start_year, args.final_year))
 
-    import plotly.express as px
-    fig = px.line(df, x=df.index, y=df.columns, title='Financial Simulation')
-    fig.update_xaxes(title_text='Year')
-    fig.update_yaxes(title_text='Value')
-    from google.cloud import storage
 
-    import plotly.express as px
     fig = px.line(df, x=df.index, y=df.columns, title='Financial Simulation')
     fig.update_xaxes(title_text='Year')
     fig.update_yaxes(title_text='Value')
     
     # Write to GCS
-    file_name = f'favour_pension_{datetime.now().strftime("%Y%m%d_%H%M%S")}.html'
+    file_name = f'sim_{datetime.now().strftime("%Y%m%d_%H%M%S")}.html'
     storage_client = storage.Client()
     bucket = storage_client.bucket(bucket_name)
     blob = bucket.blob(file_name)

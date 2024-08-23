@@ -12,12 +12,19 @@ class Human:
         self.utility.append(ammount)
         self.cash -= ammount
 
-
-
     def put_in_cash(self, ammount_to_add):
         self.cash += ammount_to_add
 
     def get_from_cash(self, ammount_to_get):
+        self.cash -= ammount_to_get
+        if self.cash < 1:
+            logging.warning(msg=f"Not enough money in CASH: {self.cash}")
+        return ammount_to_get
+        
+        
+
+
+
         self.cash -= ammount_to_get
         if self.cash < 0:
             logging.warning(msg=f"Cash is negative: {self.cash}")

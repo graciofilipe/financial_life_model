@@ -1,3 +1,6 @@
+import logging
+
+
 class DisposableCash:
     def __init__(self, initial_value=0):
         self.asset_value = initial_value
@@ -27,7 +30,8 @@ class SotcksAndSharesISA:
             self.asset_value -= amount
             return amount
         else:
-            return "Insufficient funds"
+            logging.warning(msg=f"Not enough money in ISA")
+            return self.asset_value
 
     def grow_per_year(self):
         self.asset_value *= (1+self.growth_rate)
@@ -80,6 +84,7 @@ class GeneralInvestmentAccount:
             return "Insufficient funds"
 
     def grow_per_year(self):
+        self.units = max(0, self.units)
         self.current_unit_price = self.current_unit_price * (1+self.growth_rate)
         self.asset_value = self.units * self.current_unit_price
         
