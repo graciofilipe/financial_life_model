@@ -1,0 +1,27 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - build
+      - '-t'
+      - 'europe-docker.pkg.dev/$PROJECT_ID/financial_life_model/financial_life_model-image:latest'
+      - '.'
+    env:
+      - PROJECT_ID=$PROJECT_ID
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - push
+      - 'europe-docker.pkg.dev/$PROJECT_ID/financial_life_model/financial_life_model-image:latest'
+    env:
+      - PROJECT_ID=$PROJECT_ID
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args:
+      - run
+      - jobs
+      - deploy
+      - financial_life_model-job
+      - --image=europe-docker.pkg.dev/$PROJECT_ID/financial_life_model/financial_life_model-image:latest
+      - --region=europe-west1
+      - --cpu=2
+      - --memory=2Gi
+      - --max-retries=0
+      - --set-env-vars=PROJECT_ID=$PROJECT_ID
