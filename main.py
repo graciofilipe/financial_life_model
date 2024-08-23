@@ -35,6 +35,9 @@ GIA_list = []
 living_costs_list = []
 ammount_needed_from_gia_list = []
 TOTAL_ASSETS_list = []
+money_invested_in_ISA = []
+money_invested_in_GIA = []
+
 
 
 
@@ -58,20 +61,24 @@ if __name__ == "__main__":
     parser.add_argument("--NSI_capital", required=False, default=50000)
     parser.add_argument("--NSI_interest_rate", required=False, default=0.02)
 
-    parser.add_argument("--pension_capital", required=False, default=50000)
+    parser.add_argument("--pension_capital", required=False, default=100000)
     parser.add_argument("--pension_growth_rate", required=False, default=0.03)
 
-    parser.add_argument("--ISA_capital", required=False, default=150000)
+    parser.add_argument("--ISA_capital", required=False, default=100000)
     parser.add_argument("--ISA_growth_rate", required=False, default=0.03)
 
-    parser.add_argument("--GIA_capital", required=False, default=250000)
+    parser.add_argument("--GIA_capital", required=False, default=100000)
     parser.add_argument("--GIA_growth_rate", required=False, default=0.03)
 
     parser.add_argument("--CG_strategy", required=False, default="harvest")
 
     parser.add_argument("--buffer_multiplier", required=False, default=1.1)
 
-    parser.add_argument("--utility_multiplier", required=False, default=1)
+    parser.add_argument("--utility_income_multiplier", required=False, default=0.5)
+    parser.add_argument("--utility_investments_multiplier", required=False, default=0.1)
+    parser.add_argument("--utility_pension_multiplier", required=False, default=0.03)
+    parser.add_argument("--utility_cap", required=False, default=50000)
+
 
 
 
@@ -155,9 +162,16 @@ if __name__ == "__main__":
         
         # NOW I CAN PUT THIS IN CASH before paying things ##
         filipe.put_in_cash(income_after_tax)
+
+        #### pay my living costs
+        filipe.get_from_cash(filipe.living_costs[year])
         
-       
-        utility_desired = min(my_ISA.asset_value+my_gia.asset_value, min(100000, income_after_tax*args.utility_multiplier))
+
+        utility_desired = min(args.utility_cap, income_after_tax*args.utility_income_multiplier + \
+                                                get_last_element_or_zero(pension_list)*args.utility_pension_multiplier + \
+                                                (my_ISA.asset_value + my_gia.asset_value)*args.utility_investments_multiplier)
+        #don't buy more utility than I have in assets and never more than utility_cap
+
 
         # CAPITAL GAINS (and accessing GIA if I need it for other reasons)
         desired_buffer_in_cash = (filipe.living_costs[year]*args.buffer_multiplier + get_last_element_or_zero(capital_gains_tax_list))
@@ -195,13 +209,6 @@ if __name__ == "__main__":
         filipe.put_in_cash(amount_needed_from_gia)
         _ = filipe.get_from_cash(capital_gains_tax)
         
-    
-    
-        #### pay my living costs
-        filipe.get_from_cash(filipe.living_costs[year])
-        
-        
-
         ## AFTER I PAY TAXES AND LIVING EXPENSES, I INVEST OR BUY UTILITY ##
         # I can't buy more utility than I have in ISA AND GIA combined and I don't want to buy more than 100k
         filipe.buy_utility(utility_desired)
@@ -239,6 +246,8 @@ if __name__ == "__main__":
         national_insurance_due_list.append(ni_due)
         income_after_tax_list.append(income_after_tax)
         living_costs_list.append(filipe.living_costs[year])
+        money_invested_in_ISA.append(money_for_ISA)
+        money_invested_in_GIA.append(money_for_gia)
         TOTAL_ASSETS_list.append(total_assets)
 
 
@@ -266,7 +275,9 @@ if __name__ == "__main__":
         'ISA': ISA_list,
         'GIA': GIA_list,
         'Utility': filipe.utility,
-        'Total Assets': TOTAL_ASSETS_list
+        'Total Assets': TOTAL_ASSETS_list,
+        'Money Invested in ISA': money_invested_in_ISA,
+        'Money Invested in GIA': money_invested_in_GIA,
     }, index=range(args.start_year, args.final_year))
 
 
