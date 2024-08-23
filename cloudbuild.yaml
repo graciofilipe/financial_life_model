@@ -3,14 +3,14 @@ steps:
     args:
       - build
       - '-t'
-      - 'europe-docker.pkg.dev/$PROJECT_ID/financial_life_model/financial_life_model-image:latest'
+      - 'europe-docker.pkg.dev/$PROJECT_ID/financial-life-model/financial-life-model-image:latest'
       - '.'
     env:
       - PROJECT_ID=$PROJECT_ID
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - push
-      - 'europe-docker.pkg.dev/$PROJECT_ID/financial_life_model/financial_life_model-image:latest'
+      - 'europe-docker.pkg.dev/$PROJECT_ID/financial-life-model/financial-life-model-image:latest'
     env:
       - PROJECT_ID=$PROJECT_ID
   - name: 'gcr.io/cloud-builders/gcloud'
@@ -18,8 +18,8 @@ steps:
       - run
       - jobs
       - deploy
-      - financial_life_model-job
-      - --image=europe-docker.pkg.dev/$PROJECT_ID/financial_life_model/financial_life_model-image:latest
+      - financial-life-model-job
+      - --image=europe-docker.pkg.dev/$PROJECT_ID/financial-life-model/financial-life-model-image:latest
       - --region=europe-west1
       - --cpu=2
       - --memory=2Gi
