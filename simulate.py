@@ -62,7 +62,7 @@ def simulate_a_life(args):
         taxable_salary = my_employment.get_salary(year)
         # not putting this in cash, because I actually recieve this after the tax is taken
 
-
+        
         # get UK gross interest
         gross_interest = my_fixed_interest.pay_interest() 
         
@@ -121,10 +121,19 @@ def simulate_a_life(args):
         #### pay my living costs
         filipe.get_from_cash(filipe.living_costs[year])
         
+        if year >= args.retirement_year:
+            utility_income_multiplier = args.utility_income_multiplier_ret
+            utility_investments_multiplier = args.utility_investments_multiplier_ret
+            utility_pension_multiplier = args.utility_pension_multiplier_ret
+        else:
+            utility_income_multiplier = args.utility_income_multiplier_work
+            utility_investments_multiplier = args.utility_investments_multiplier_work
+            utility_pension_multiplier = args.utility_pension_multiplier_work
 
-        utility_desired = min(args.utility_cap, income_after_tax*args.utility_income_multiplier + \
-                                                get_last_element_or_zero(pension_list)*args.utility_pension_multiplier + \
-                                                (my_ISA.asset_value + my_gia.asset_value)*args.utility_investments_multiplier)
+
+        utility_desired = max(args.utility_base, min(args.utility_cap, income_after_tax*utility_income_multiplier + \
+                                                get_last_element_or_zero(pension_list)*utility_pension_multiplier + \
+                                                (my_ISA.asset_value + my_gia.asset_value)*utility_investments_multiplier))
         #don't buy more utility than I have in assets and never more than utility_cap
         # I can't buy more utility than I have in ISA AND GIA combined and I don't want to buy more than 100k
 
@@ -164,12 +173,13 @@ def simulate_a_life(args):
                 capital_gains_tax = hmrc.capital_gains_tax_due(capital_gains)
 
         filipe.put_in_cash(amount_needed_from_gia)
-        _ = filipe.get_from_cash(capital_gains_tax)
+        
+        # I pay CGT next year
+        
         
         ## AFTER I PAY TAXES AND LIVING EXPENSES, I INVEST OR BUY UTILITY ##
         filipe.buy_utility(min(utility_desired, filipe.cash))
 
-    
 
         # INVEST FOR NEXT YEAR #
         money_for_ISA = filipe.get_from_cash(min(20000, max(filipe.cash - desired_buffer_in_cash, 0)))
@@ -179,7 +189,6 @@ def simulate_a_life(args):
         money_for_gia = filipe.get_from_cash(0.5*(max(0, filipe.cash - desired_buffer_in_cash)))
         if money_for_gia > 1:
             my_gia.put_money(money_for_gia)
-
         
         total_assets = my_pension.asset_value + my_ISA.asset_value + my_gia.asset_value + filipe.cash
 
@@ -207,7 +216,35 @@ def simulate_a_life(args):
         money_invested_in_GIA.append(money_for_gia)
         TOTAL_ASSETS_list.append(total_assets)
 
+    
+    
     total_ut = round(sum(filipe.utility) + filipe.cash)
+    df = pd.DataFrame({
+        'Taxable Salary': taxable_salary_list,
+        'Gross Interest': gross_interest_list,
+        'Taxable Interest': taxable_interest_list,
+        'Capital Gains': capital_gains_list,
+        'Capital Gains Tax': capital_gains_tax_list,
+        'Pension Allowance': pension_allowance_list,
+        'Pension Pay Over Allowance': pension_pay_over_allowance_list,
+        'Taken from Pension Pot': taken_from_pension_list,
+        'Total Taxable Income': total_taxable_income_list,
+        'Income Tax Due': income_tax_due_list,
+        'National Insurance Due': national_insurance_due_list,
+        'Total Tax': all_tax_list,
+        'Amount Needed from GIA': ammount_needed_from_gia_list,
+        'Living Costs': living_costs_list,
+        'Income After Tax': income_after_tax_list,
+        'Cash': cash_list,
+        'Pension': pension_list,
+        'ISA': ISA_list,
+        'GIA': GIA_list,
+        'Utility': filipe.utility,
+        'Total Assets': TOTAL_ASSETS_list,
+        'Money Invested in ISA': money_invested_in_ISA,
+        'Money Invested in GIA': money_invested_in_GIA,
+    }, index=range(args.start_year, args.final_year))
 
     print('TOTAL UTILITY ,' , total_ut)
-    return total_ut
+
+    return total_ut, df
