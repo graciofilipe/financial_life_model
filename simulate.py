@@ -38,7 +38,7 @@ def simulate_a_life(args):
     money_invested_in_ISA = []
     money_invested_in_GIA = []
 
-    bucket_name = args.bucket_name
+    #bucket_name = args.bucket_name
 
     ## set up my world ##
     my_employment = Employment(gross_salary=generate_salary())
@@ -126,6 +126,8 @@ def simulate_a_life(args):
                                                 get_last_element_or_zero(pension_list)*args.utility_pension_multiplier + \
                                                 (my_ISA.asset_value + my_gia.asset_value)*args.utility_investments_multiplier)
         #don't buy more utility than I have in assets and never more than utility_cap
+        # I can't buy more utility than I have in ISA AND GIA combined and I don't want to buy more than 100k
+
 
 
         # CAPITAL GAINS (and accessing GIA if I need it for other reasons)
@@ -165,8 +167,8 @@ def simulate_a_life(args):
         _ = filipe.get_from_cash(capital_gains_tax)
         
         ## AFTER I PAY TAXES AND LIVING EXPENSES, I INVEST OR BUY UTILITY ##
-        # I can't buy more utility than I have in ISA AND GIA combined and I don't want to buy more than 100k
-        filipe.buy_utility(utility_desired)
+        filipe.buy_utility(min(utility_desired, filipe.cash))
+
     
 
         # INVEST FOR NEXT YEAR #
@@ -208,3 +210,4 @@ def simulate_a_life(args):
     total_ut = round(sum(filipe.utility) + filipe.cash)
 
     print('TOTAL UTILITY ,' , total_ut)
+    return total_ut

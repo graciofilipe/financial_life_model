@@ -1,13 +1,18 @@
-from google.cloud import aiplatform
-from google.cloud.aiplatform.vizier import Study, pyvizier
+#from google.cloud.aiplatform.vizier import Study, pyvizier
 from simulate import simulate_a_life
 import datetime
+import argparse
+
+import json
+import datetime
+from google.cloud import aiplatform
+import os
+
 
 
 if __name__ == "__main__":
 
-    project_id = os.environ.get('PROJECT_ID')
-
+    num_trials = 66
 
     parser = argparse.ArgumentParser()
     #parser.add_argument("--bucket_name", required=True)
@@ -43,64 +48,94 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    PROJECT_ID = project_id
-    LOCATION = "us-central1"  # @param {type:"string"}
+    
+    REGION = "europe-west1"
+    PROJECT_ID = os.environ.get('PROJECT_ID')
+
+    STUDY_DISPLAY_NAME = '{}_study_{}'.format(PROJECT_ID.replace('-', ''), datetime.datetime.now().strftime('%Y%m%d_%H%M%S')) #@param {type: 'string'}
+    ENDPOINT = REGION + '-aiplatform.googleapis.com'
+    PARENT = 'projects/{}/locations/{}'.format(PROJECT_ID, REGION)
+
+    
+    
+   
+    param_utility_income_multiplier = {
+    'parameter_id': 'utility_income_multiplier',
+    'double_value_spec': {
+        'min_value': 0.01,
+        'max_value': 1.0
+    }}
+
+    param_utility_investments_multiplier = {
+    'parameter_id': 'utility_investments_multiplier',
+    'double_value_spec': {
+        'min_value': 0.01,
+        'max_value': 1.0
+    }}
+
+    param_utility_pension_multiplier = {
+    'parameter_id': 'utility_pension_multiplier',
+    'double_value_spec': {
+        'min_value': 0.01,
+        'max_value': 1.0
+    }}
+
+    param_utility_cap = {
+    'parameter_id': 'utility_cap',
+    'double_value_spec': {
+        'min_value': 10000,
+        'max_value': 100000
+    }}
 
 
 
-    # These will be automatically filled in.
-    STUDY_DISPLAY_NAME = "{}_study_{}".format(
-        PROJECT_ID.replace("-", ""), datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    )
-    PARENT = "projects/{}/locations/{}".format(PROJECT_ID, LOCATION)
+    metric_utility = {
+        'metric_id': 'utility',
+        'goal': 'MAXIMIZE'
+    }
 
-    print("LOCATION: {}".format(LOCATION))
-    print("PARENT: {}".format(PARENT))
-
-    # Parameter Configuration
-    problem = pyvizier.StudyConfig()
-    #problem.algorithm = pyvizier.Algorithm.RANDOM_SEARCH
-
-    # Objective Metrics
-    problem.metric_information.append(
-        pyvizier.MetricInformation(name="total_util", goal=pyvizier.ObjectiveMetricGoal.MAXIMIZE)
-    )
-
-    # Defines the parameters configuration.
-    root = problem.search_space.select_root()
-    root.add_float_param("utility_income_multiplier", 0, 1.0, scale_type=pyvizier.ScaleType.LINEAR)
-
-    aiplatform.init(project=PROJECT_ID, location=LOCATION)
-    study = Study.create_or_load(display_name=STUDY_DISPLAY_NAME, problem=problem)
-
-    STUDY_ID = study.name
-    print("STUDY_ID: {}".format(STUDY_ID))
-
-    def create_metrics(trial_id, utility_income_multiplier):
-        print(("=========== Start Trial: [{}] =============").format(trial_id))
-        measurement = pyvizier.Measurement()
-        measurement.metrics["total_util"] = simulate_a_life(utility_income_multiplier)
-        return measurement
+    study = {
+        'display_name': STUDY_DISPLAY_NAME,
+        'study_spec': {
+        'algorithm': 'ALGORITHM_UNSPECIFIED',
+        'parameters': [param_utility_income_multiplier, param_utility_investments_multiplier, param_utility_pension_multiplier, param_utility_cap],
+        'metrics': [metric_utility],
+        }
+    }
+    vizier_client = aiplatform.gapic.VizierServiceClient(client_options=dict(api_endpoint=ENDPOINT))
+    
+    study = vizier_client.create_study(parent=PARENT, study=study)
+    STUDY_NAME = study.name
 
 
-    worker_id = "worker1"  # @param {type: 'string'}
-    suggestion_count_per_request = 3  # @param {type: 'integer'}
-    max_trial_id_to_stop = 4  # @param {type: 'integer'}
+    for i in range(0, num_trials):
 
-    print("worker_id: {}".format(worker_id))
-    print("suggestion_count_per_request: {}".format(suggestion_count_per_request))
-    print("max_trial_id_to_stop: {}".format(max_trial_id_to_stop))
+        suggest_response = vizier_client.suggest_trials({
+        'parent': STUDY_NAME,
+        'suggestion_count': 1,
+        })
 
-    while len(study.trials()) < max_trial_id_to_stop:
-        trials = study.suggest(count=suggestion_count_per_request, worker=worker_id)
 
-        for suggested_trial in trials:
-            measurement = CreateMetrics(
-                suggested_trial.name,
-                suggested_trial.parameters["utility_income_multiplier"].value
-            )
-            suggested_trial.add_measurement(measurement=measurement)
-            suggested_trial.complete(measurement=measurement)
+        dd = {x.parameter_id: x.value for x in suggest_response.result().trials[0].parameters}
+        
+        args.utility_income_multiplier = dd['utility_income_multiplier']
+        args.utility_investments_multiplier = dd['utility_investments_multiplier']
+        args.utility_pension_multiplier = dd['utility_pension_multiplier']
+        args.utility_cap = dd['utility_cap']
 
-    optimal_trials = study.optimal_trials()
-    print("optimal_trials: {}".format(optimal_trials))
+
+        RESULT = simulate_a_life(args)
+        
+        # vizier_client.add_trial_measurement({
+        #     'trial_name': suggest_response.result().trials[0].name,
+        #     'measurement': {
+        #         'metrics': [{'metric_id': 'utility', 'value':RESULT }]
+        #     }
+        # })
+
+        vizier_client.complete_trial({
+        'name': suggest_response.result().trials[0].name,
+        'final_measurement': {
+                'metrics': [{'metric_id': 'utility', 'value':RESULT }]
+        }
+        })
