@@ -33,7 +33,7 @@ def simulate_a_life(args):
     ISA_list = []
     GIA_list = [] 
     living_costs_list = []
-    ammount_needed_from_gia_list = []
+    ammount_taken_from_gia_list = []
     TOTAL_ASSETS_list = []
     money_invested_in_ISA = []
     money_invested_in_GIA = []
@@ -59,7 +59,7 @@ def simulate_a_life(args):
                 
         
         # get paid
-        taxable_salary = my_employment.get_salary(year)
+        taxable_salary = my_employment.get_salary_before_tax_after_pension_contributions(year)
         # not putting this in cash, because I actually recieve this after the tax is taken
 
         
@@ -94,7 +94,6 @@ def simulate_a_life(args):
                                                                                    retirement_year=args.retirement_year,
                                                                                    final_year=args.final_year)
         taken_from_pension = my_pension.get_money(amount_to_take_from_pension_pot)
-        #filipe.put_in_cash(taken_from_pension)
 
         ## Calculate TAXES ##
         if year == args.retirement_year:
@@ -119,8 +118,16 @@ def simulate_a_life(args):
         filipe.put_in_cash(income_after_tax)
 
         #### pay my living costs
-        filipe.get_from_cash(filipe.living_costs[year])
+        living_costs = filipe.living_costs[year]
+        if living_costs < filipe.cash:
+            _ = filipe.get_from_cash(filipe.living_costs[year])
+            amount_needed_to_pay_living_costs = 0 
+        else:
+            amount_taken = filipe.get_from_cash(filipe.cash - 1)
+            amount_needed_to_pay_living_costs = living_costs - amount_taken
         
+
+        # Now deal with Utility (I have to deal with this now so I know how much I need to take from GIA) 
         if year >= args.retirement_year:
             utility_income_multiplier = args.utility_income_multiplier_ret
             utility_investments_multiplier = args.utility_investments_multiplier_ret
@@ -139,31 +146,37 @@ def simulate_a_life(args):
 
 
         # CAPITAL GAINS (and accessing GIA if I need it for other reasons)
-        desired_buffer_in_cash = (filipe.living_costs[year]*args.buffer_multiplier + get_last_element_or_zero(capital_gains_tax_list))
-        
-        amount_needed = max(desired_buffer_in_cash  + utility_desired - filipe.cash, 0)
+        amount_needed = max(args.buffer_multiplier*filipe.living_costs[year] + \
+                                   utility_desired + \
+                                   amount_needed_to_pay_living_costs + \
+                                   get_last_element_or_zero(capital_gains_tax_list) - \
+                                   filipe.cash, 
+                                   0)
 
-        amount_needed_from_gia = min(my_gia.asset_value, amount_needed)
-        amount_needed_from_elsewhere = max(0, amount_needed - amount_needed_from_gia)
+        amount_to_take_from_gia = min(my_gia.asset_value, amount_needed)
+
+        amount_needed_from_elsewhere = max(0, amount_needed - amount_to_take_from_gia)
         
         if amount_needed_from_elsewhere > 0:
-            isa_money = my_ISA.get_money(amount=amount_needed_from_elsewhere)
+            amount_to_take_from_ISA = min(my_ISA.asset_value, amount_needed_from_elsewhere)
+            isa_money = my_ISA.get_money(amount=amount_to_take_from_ISA)
             filipe.put_in_cash(isa_money)
+            amount_needed_from_elsewhere -= isa_money
         
-        if amount_needed_from_gia <= 0:
+        if amount_to_take_from_gia <= 0:
             if args.CG_strategy == "harvest" and my_gia.asset_value > 1:
-                gia_money, capital_gains = my_gia.get_money(my_gia.asset_value-1)
-                my_gia.put_money(gia_money)
+                amount_taken_from_gia, capital_gains = my_gia.get_money(my_gia.asset_value-1)
+                my_gia.put_money(amount_taken_from_gia)
                 capital_gains_tax = hmrc.capital_gains_tax_due(capital_gains)
 
             elif args.CG_strategy == "let_grow":
                 capital_gains = 0
                 capital_gains_tax = 0
         
-        elif amount_needed_from_gia > 1:
+        elif amount_to_take_from_gia > 1:
             if args.CG_strategy == "harvest" and my_gia.asset_value > 1:
-                gia_money, capital_gains = my_gia.get_money(my_gia.asset_value-1)
-                my_gia.put_money(gia_money - amount_needed_from_gia)
+                amount_taken_from_gia, capital_gains = my_gia.get_money(my_gia.asset_value-1)
+                my_gia.put_money(amount_taken_from_gia - amount_to_take_from_gia)
                 capital_gains_tax = hmrc.capital_gains_tax_due(capital_gains)
 
             elif args.CG_strategy == "let_grow":
@@ -171,21 +184,26 @@ def simulate_a_life(args):
                 filipe.put_in_cash(extra_cash)
                 capital_gains_tax = hmrc.capital_gains_tax_due(capital_gains)
 
-        filipe.put_in_cash(amount_needed_from_gia)
+        filipe.put_in_cash(amount_taken_from_gia)
         
         # I pay CGT next year
         
         
         ## AFTER I PAY TAXES AND LIVING EXPENSES, I INVEST OR BUY UTILITY ##
-        filipe.buy_utility(min(utility_desired, filipe.cash))
+        # I couldn't find the following money so I need to take it from the utility desired
+        utility_i_can_afford = utility_desired - amount_needed_from_elsewhere
+        filipe.buy_utility(utility_i_can_afford)
 
 
         # INVEST FOR NEXT YEAR #
-        money_for_ISA = filipe.get_from_cash(min(20000, max(filipe.cash - desired_buffer_in_cash, 0)))
+        amount_available = max(0, filipe.cash - args.buffer_multiplier*filipe.living_costs[year])
+
+        money_for_ISA = filipe.get_from_cash(min(20000, amount_available))
         if money_for_ISA > 1:
             my_ISA.put_money(money_for_ISA)
+            amount_available = max(0, amount_available - money_for_ISA)
         
-        money_for_gia = filipe.get_from_cash(0.5*(max(0, filipe.cash - desired_buffer_in_cash)))
+        money_for_gia = filipe.get_from_cash(amount_available)
         if money_for_gia > 1:
             my_gia.put_money(money_for_gia)
         
@@ -193,7 +211,7 @@ def simulate_a_life(args):
 
         # LOG VALUES
         cash_list.append(filipe.cash)
-        ammount_needed_from_gia_list.append(amount_needed_from_gia)
+        ammount_taken_from_gia_list.append(amount_taken_from_gia)
         pension_list.append(my_pension.asset_value)
         ISA_list.append(my_ISA.asset_value)
         GIA_list.append(my_gia.asset_value)
@@ -231,7 +249,7 @@ def simulate_a_life(args):
         'Income Tax Due': income_tax_due_list,
         'National Insurance Due': national_insurance_due_list,
         'Total Tax': all_tax_list,
-        'Amount Needed from GIA': ammount_needed_from_gia_list,
+        'Amount taken from GIA': ammount_taken_from_gia_list,
         'Living Costs': living_costs_list,
         'Income After Tax': income_after_tax_list,
         'Cash': cash_list,

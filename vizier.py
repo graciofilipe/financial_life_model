@@ -48,7 +48,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--CG_strategy", required=False, default="harvest")
 
-    parser.add_argument("--buffer_multiplier", required=False, default=0.1)
+    parser.add_argument("--buffer_multiplier", required=False, default=1.5)
 
     parser.add_argument("--utility_income_multiplier_ret", required=False, default=0.5)
     parser.add_argument("--utility_investments_multiplier_ret", required=False, default=0.1)
