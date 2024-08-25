@@ -29,7 +29,7 @@ if __name__ == "__main__":
     parser.add_argument("--final_year", required=False, default=2074)
     parser.add_argument("--retirement_year", required=False, default=2054)
     
-    parser.add_argument("--starting_cash", required=False, default=25000)
+    parser.add_argument("--starting_cash", required=False, default=55000)
     
     parser.add_argument("--fixed_interest_capital", required=False, default=1000)
     parser.add_argument("--fixed_interest_rate", required=False, default=0.02)
@@ -38,17 +38,17 @@ if __name__ == "__main__":
     parser.add_argument("--NSI_interest_rate", required=False, default=0.02)
 
     parser.add_argument("--pension_capital", required=False, default=150000)
-    parser.add_argument("--pension_growth_rate", required=False, default=0.03)
+    parser.add_argument("--pension_growth_rate", required=False, default=0.02)
 
     parser.add_argument("--ISA_capital", required=False, default=200000)
-    parser.add_argument("--ISA_growth_rate", required=False, default=0.03)
+    parser.add_argument("--ISA_growth_rate", required=False, default=0.02)
 
     parser.add_argument("--GIA_capital", required=False, default=700000)
-    parser.add_argument("--GIA_growth_rate", required=False, default=0.03)
+    parser.add_argument("--GIA_growth_rate", required=False, default=0.02)
 
     parser.add_argument("--CG_strategy", required=False, default="harvest")
 
-    parser.add_argument("--buffer_multiplier", required=False, default=1.5)
+    parser.add_argument("--buffer_multiplier", required=False, default=1.2)
 
     parser.add_argument("--utility_income_multiplier_ret", required=False, default=0.5)
     parser.add_argument("--utility_investments_multiplier_ret", required=False, default=0.1)
@@ -78,21 +78,21 @@ if __name__ == "__main__":
     'parameter_id': 'utility_income_multiplier_work',
     'double_value_spec': {
         'min_value': 0.01,
-        'max_value': 1.0
+        'max_value': 1.2
     }}
 
     param_utility_investments_multiplier_work = {
     'parameter_id': 'utility_investments_multiplier_work',
     'double_value_spec': {
         'min_value': 0.01,
-        'max_value': 1.0
+        'max_value': 1.2
     }}
 
     param_utility_pension_multiplier_work = {
     'parameter_id': 'utility_pension_multiplier_work',
     'double_value_spec': {
         'min_value': 0.01,
-        'max_value': 1.0
+        'max_value': 1.2
     }}
 
 

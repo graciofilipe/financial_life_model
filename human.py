@@ -9,7 +9,7 @@ class Human:
         self.utility = []
     
     def buy_utility(self, ammount):
-        self.utility.append(ammount)
+        self.utility.append(ammount**0.88) ## some vaguely non linear diminishing returns to money
         self.cash -= ammount
 
     def put_in_cash(self, ammount_to_add):

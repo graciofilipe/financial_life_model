@@ -184,14 +184,13 @@ def simulate_a_life(args):
                 filipe.put_in_cash(extra_cash)
                 capital_gains_tax = hmrc.capital_gains_tax_due(capital_gains)
 
-        filipe.put_in_cash(amount_taken_from_gia)
-        
-        # I pay CGT next year
-        
+
+        filipe.put_in_cash(amount_to_take_from_gia)
+                
         
         ## AFTER I PAY TAXES AND LIVING EXPENSES, I INVEST OR BUY UTILITY ##
         # I couldn't find the following money so I need to take it from the utility desired
-        utility_i_can_afford = utility_desired - amount_needed_from_elsewhere
+        utility_i_can_afford = max(0, utility_desired - amount_needed_from_elsewhere)
         filipe.buy_utility(utility_i_can_afford)
 
 
@@ -234,7 +233,9 @@ def simulate_a_life(args):
         TOTAL_ASSETS_list.append(total_assets)
 
     
-    
+    # print(f'end of year cash: {filipe.cash}')
+    # print(f'end of year utility: {filipe.utility}')
+
     total_ut = round(sum(filipe.utility) + filipe.cash)
     df = pd.DataFrame({
         'Taxable Salary': taxable_salary_list,
