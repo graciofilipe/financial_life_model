@@ -138,7 +138,6 @@ def simulate_a_life(args):
         # I can't buy more utility than I have in ISA AND GIA combined and I don't want to buy more than 100k
 
 
-
         # CAPITAL GAINS (and accessing GIA if I need it for other reasons)
         desired_buffer_in_cash = (filipe.living_costs[year]*args.buffer_multiplier + get_last_element_or_zero(capital_gains_tax_list))
         

@@ -29,7 +29,7 @@ if __name__ == "__main__":
     parser.add_argument("--final_year", required=False, default=2074)
     parser.add_argument("--retirement_year", required=False, default=2054)
     
-    parser.add_argument("--starting_cash", required=False, default=10000)
+    parser.add_argument("--starting_cash", required=False, default=25000)
     
     parser.add_argument("--fixed_interest_capital", required=False, default=1000)
     parser.add_argument("--fixed_interest_rate", required=False, default=0.02)
@@ -37,18 +37,18 @@ if __name__ == "__main__":
     parser.add_argument("--NSI_capital", required=False, default=50000)
     parser.add_argument("--NSI_interest_rate", required=False, default=0.02)
 
-    parser.add_argument("--pension_capital", required=False, default=100000)
+    parser.add_argument("--pension_capital", required=False, default=150000)
     parser.add_argument("--pension_growth_rate", required=False, default=0.03)
 
-    parser.add_argument("--ISA_capital", required=False, default=100000)
+    parser.add_argument("--ISA_capital", required=False, default=200000)
     parser.add_argument("--ISA_growth_rate", required=False, default=0.03)
 
-    parser.add_argument("--GIA_capital", required=False, default=100000)
+    parser.add_argument("--GIA_capital", required=False, default=700000)
     parser.add_argument("--GIA_growth_rate", required=False, default=0.03)
 
     parser.add_argument("--CG_strategy", required=False, default="harvest")
 
-    parser.add_argument("--buffer_multiplier", required=False, default=1.1)
+    parser.add_argument("--buffer_multiplier", required=False, default=0.1)
 
     parser.add_argument("--utility_income_multiplier_ret", required=False, default=0.5)
     parser.add_argument("--utility_investments_multiplier_ret", required=False, default=0.1)
@@ -78,14 +78,14 @@ if __name__ == "__main__":
     'parameter_id': 'utility_income_multiplier_work',
     'double_value_spec': {
         'min_value': 0.01,
-        'max_value': 2
+        'max_value': 1.0
     }}
 
     param_utility_investments_multiplier_work = {
     'parameter_id': 'utility_investments_multiplier_work',
     'double_value_spec': {
         'min_value': 0.01,
-        'max_value': 2
+        'max_value': 1.0
     }}
 
     param_utility_pension_multiplier_work = {
@@ -135,6 +135,11 @@ if __name__ == "__main__":
         'goal': 'MAXIMIZE'
     }
 
+    metric_utility_sd = {
+        'metric_id': 'utility_sd',
+        'goal': 'MINIMIZE'
+    }
+
     study = {
         'display_name': STUDY_DISPLAY_NAME,
         'study_spec': {
@@ -142,7 +147,7 @@ if __name__ == "__main__":
         'parameters': [param_utility_income_multiplier_work, param_utility_investments_multiplier_work, param_utility_pension_multiplier_work,
                        param_utility_income_multiplier_ret, param_utility_investments_multiplier_ret, param_utility_pension_multiplier_ret,
                        param_utility_base, param_utility_cap],
-        'metrics': [metric_utility],
+        'metrics': [metric_utility, metric_utility_sd],
         }
     }
     vizier_client = aiplatform.gapic.VizierServiceClient(client_options=dict(api_endpoint=ENDPOINT))
@@ -177,7 +182,8 @@ if __name__ == "__main__":
         vizier_client.complete_trial({
         'name': suggest_response.result().trials[0].name,
         'final_measurement': {
-                'metrics': [{'metric_id': 'utility', 'value':RESULT }]
+                'metrics': [{'metric_id': 'utility', 'value': RESULT }, 
+                            {'metric_id': 'utility_sd', 'value': df['Utility'].std()/df['Utility'].mean()}]
         }
         })
     

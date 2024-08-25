@@ -16,30 +16,22 @@ class Human:
         self.cash += ammount_to_add
 
     def get_from_cash(self, ammount_to_get):
-        self.cash -= ammount_to_get
-        if self.cash < 1:
-            logging.warning(msg=f"Not enough money in CASH: {self.cash}")
-        return ammount_to_get
-        
-        
 
-
-
-        self.cash -= ammount_to_get
-        if self.cash < 0:
-            logging.warning(msg=f"Cash is negative: {self.cash}")
-        return ammount_to_get
-
-
+        if ammount_to_get >= self.cash:
+            logging.warning(msg=f"Not enough money in CASH: returned none")
+            return 0
+        else:
+            self.cash -= ammount_to_get
+            return ammount_to_get
 
 class Employment:
-    def __init__(self, gross_salary):
+    def __init__(self, gross_salary, employee_pension_contributions_pct=0.07, employer_pension_contributions_pct=0.07):
         self.gross_salary = gross_salary
-        self.employee_pension_contributions_pct = 0.12
-        self.employer_pension_contributions_pct = 0.07
+        self.employee_pension_contributions_pct = employee_pension_contributions_pct
+        self.employer_pension_contributions_pct = employer_pension_contributions_pct
     
-    def get_salary(self, year):
-        return self.gross_salary.get(year, 0) - self.gross_salary.get(year,0)*self.employee_pension_contributions_pct
+    def get_salary_before_tax_after_pension_contributions(self, year):
+        return self.gross_salary.get(year, 0) - self.gross_salary.get(year, 0)*self.employee_pension_contributions_pct
 
     def get_gross_salary(self, year):
         return self.gross_salary.get(year, 0)
