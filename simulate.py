@@ -204,7 +204,7 @@ def simulate_a_life(args):
         # I couldn't find the following money so I need to take it from the utility desired
 
         if amount_needed_to_pay_living_costs > 0:
-            filipe.utility.append(-(amount_needed_to_pay_living_costs)**2) # square penalty for negative utility
+            filipe.utility.append(-(amount_needed_to_pay_living_costs)**1.2) # exp penalty for negative utility
             utility_i_can_afford = - amount_needed_to_pay_living_costs
         else:
             utility_i_can_afford = max(0, utility_desired - amount_needed_from_elsewhere - amount_needed_to_pay_living_costs)

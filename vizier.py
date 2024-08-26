@@ -43,7 +43,7 @@ if __name__ == "__main__":
     parser.add_argument("--ISA_capital", required=False, default=200000)
     parser.add_argument("--ISA_growth_rate", required=False, default=0.02)
 
-    parser.add_argument("--GIA_capital", required=False, default=700000)
+    parser.add_argument("--GIA_capital", required=False, default=200000)
     parser.add_argument("--GIA_growth_rate", required=False, default=0.02)
 
     parser.add_argument("--CG_strategy", required=False, default="harvest")
@@ -61,8 +61,8 @@ if __name__ == "__main__":
     parser.add_argument("--utility_constant", required=False, default=5000)
     parser.add_argument("--utility_cap", required=False, default=150000)
 
-    parser.add_argument("--non_linear_utility", required=False, default=0.999)
-    parser.add_argument("--utility_discount_rate", required=False, default=0.001)
+    parser.add_argument("--non_linear_utility", required=False, default=0.99)
+    parser.add_argument("--utility_discount_rate", required=False, default=0.005)
 
     args = parser.parse_args()
 
@@ -88,14 +88,14 @@ if __name__ == "__main__":
     'parameter_id': 'utility_investments_multiplier_work',
     'double_value_spec': {
         'min_value': 0.01,
-        'max_value': 1.2
+        'max_value': 0.5
     }}
 
     param_utility_pension_multiplier_work = {
     'parameter_id': 'utility_pension_multiplier_work',
     'double_value_spec': {
         'min_value': 0.01,
-        'max_value': 1.2
+        'max_value': 0.2
     }}
 
 
@@ -123,13 +123,13 @@ if __name__ == "__main__":
     param_utility_base = {
     'parameter_id': 'utility_base',
     'double_value_spec': {
-        'min_value': 100,
-        'max_value': 10000
+        'min_value': 5000,
+        'max_value': 15000
     }}
     param_utility_cap = {
     'parameter_id': 'utility_cap',
     'double_value_spec': {
-        'min_value': 100000,
+        'min_value': 15001,
         'max_value': 1000000
     }}
 

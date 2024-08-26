@@ -1,5 +1,5 @@
 def generate_living_costs():
-    d1 = {year: 30000*(1.02)**idx  for idx, year in enumerate(range(2024, 2054))}
+    d1 = {year: 20000*(1.02)**idx  for idx, year in enumerate(range(2024, 2054))}
     d2 = {year: d1[2053]*(1.04)**idx  for idx, year in enumerate(range(2054, 2074))}
     return {**d1, **d2}
 
