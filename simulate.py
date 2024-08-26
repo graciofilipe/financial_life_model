@@ -37,6 +37,9 @@ def simulate_a_life(args):
     TOTAL_ASSETS_list = []
     money_invested_in_ISA = []
     money_invested_in_GIA = []
+    utility_i_can_afford_list = []
+    utility_desired_list = []
+
 
     #bucket_name = args.bucket_name
 
@@ -51,6 +54,7 @@ def simulate_a_life(args):
 
     filipe = Human(starting_cash=args.starting_cash,
                    living_costs=generate_living_costs(), 
+                   non_linear_utility=args.non_linear_utility,
                    pension_draw_down_function=linear_pension_draw_down_function)
 
     hmrc = TaxMan()
@@ -186,12 +190,25 @@ def simulate_a_life(args):
 
 
         filipe.put_in_cash(amount_to_take_from_gia)
+
+        # PAY THE REMAINING LIVING COSTS
+        if filipe.cash >  amount_needed_to_pay_living_costs:
+            _ = filipe.get_from_cash(amount_needed_to_pay_living_costs)
+            amount_needed_to_pay_living_costs = 0
+        else:
+            amount_payed_living_costs = filipe.get_from_cash(filipe.cash-1)
+            amount_needed_to_pay_living_costs -= amount_payed_living_costs
                 
         
         ## AFTER I PAY TAXES AND LIVING EXPENSES, I INVEST OR BUY UTILITY ##
         # I couldn't find the following money so I need to take it from the utility desired
-        utility_i_can_afford = max(0, utility_desired - amount_needed_from_elsewhere)
-        filipe.buy_utility(utility_i_can_afford)
+
+        if amount_needed_to_pay_living_costs > 0:
+            filipe.utility.append(-(amount_needed_to_pay_living_costs)**2) # square penalty for negative utility
+            utility_i_can_afford = - amount_needed_to_pay_living_costs
+        else:
+            utility_i_can_afford = max(0, utility_desired - amount_needed_from_elsewhere - amount_needed_to_pay_living_costs)
+            filipe.buy_utility(utility_i_can_afford)
 
 
         # INVEST FOR NEXT YEAR #
@@ -230,13 +247,16 @@ def simulate_a_life(args):
         living_costs_list.append(filipe.living_costs[year])
         money_invested_in_ISA.append(money_for_ISA)
         money_invested_in_GIA.append(money_for_gia)
+        utility_i_can_afford_list.append(utility_i_can_afford)
+        utility_desired_list.append(utility_desired)
         TOTAL_ASSETS_list.append(total_assets)
 
     
-    # print(f'end of year cash: {filipe.cash}')
-    # print(f'end of year utility: {filipe.utility}')
 
-    total_ut = round(sum(filipe.utility) + filipe.cash)
+    total_ut = round(sum(filipe.utility))
+    import numpy_financial as npf
+    discounted_utility = npf.npv(args.utility_discount_rate, filipe.utility).round(0)
+
     df = pd.DataFrame({
         'Taxable Salary': taxable_salary_list,
         'Gross Interest': gross_interest_list,
@@ -257,6 +277,8 @@ def simulate_a_life(args):
         'Pension': pension_list,
         'ISA': ISA_list,
         'GIA': GIA_list,
+        'Utility I can afford': utility_i_can_afford_list,
+        'Utility Desired': utility_desired_list,
         'Utility': filipe.utility,
         'Total Assets': TOTAL_ASSETS_list,
         'Money Invested in ISA': money_invested_in_ISA,
@@ -264,5 +286,6 @@ def simulate_a_life(args):
     }, index=range(args.start_year, args.final_year))
 
     print('TOTAL UTILITY ,' , total_ut)
+    print('Discounted UTILITY ,' , discounted_utility)
 
-    return total_ut, df
+    return discounted_utility, df

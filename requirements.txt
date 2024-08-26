@@ -1,3 +1,5 @@
 pandas
 plotly
 google-cloud-storage
+numpy
+numpy-financial

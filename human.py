@@ -2,14 +2,15 @@ import logging
 
 
 class Human:
-    def __init__(self, starting_cash, living_costs, pension_draw_down_function):
+    def __init__(self, starting_cash, living_costs, pension_draw_down_function, non_linear_utility):
         self.cash = starting_cash
         self.living_costs = living_costs
         self.pension_draw_down_function = pension_draw_down_function
+        self.non_linear_utility = non_linear_utility
         self.utility = []
     
     def buy_utility(self, ammount):
-        self.utility.append(ammount**0.88) ## some vaguely non linear diminishing returns to money
+        self.utility.append(ammount**self.non_linear_utility) ## some vaguely non linear diminishing returns to money
         self.cash -= ammount
 
     def put_in_cash(self, ammount_to_add):

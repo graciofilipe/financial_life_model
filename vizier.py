@@ -61,6 +61,9 @@ if __name__ == "__main__":
     parser.add_argument("--utility_constant", required=False, default=5000)
     parser.add_argument("--utility_cap", required=False, default=150000)
 
+    parser.add_argument("--non_linear_utility", required=False, default=0.999)
+    parser.add_argument("--utility_discount_rate", required=False, default=0.001)
+
     args = parser.parse_args()
 
     
@@ -135,10 +138,10 @@ if __name__ == "__main__":
         'goal': 'MAXIMIZE'
     }
 
-    metric_utility_sd = {
-        'metric_id': 'utility_sd',
-        'goal': 'MINIMIZE'
-    }
+    # metric_utility_sd = {
+    #     'metric_id': 'utility_sd',
+    #     'goal': 'MINIMIZE'
+    # }
 
     study = {
         'display_name': STUDY_DISPLAY_NAME,
@@ -147,7 +150,7 @@ if __name__ == "__main__":
         'parameters': [param_utility_income_multiplier_work, param_utility_investments_multiplier_work, param_utility_pension_multiplier_work,
                        param_utility_income_multiplier_ret, param_utility_investments_multiplier_ret, param_utility_pension_multiplier_ret,
                        param_utility_base, param_utility_cap],
-        'metrics': [metric_utility, metric_utility_sd],
+        'metrics': [metric_utility],
         }
     }
     vizier_client = aiplatform.gapic.VizierServiceClient(client_options=dict(api_endpoint=ENDPOINT))
@@ -182,8 +185,7 @@ if __name__ == "__main__":
         vizier_client.complete_trial({
         'name': suggest_response.result().trials[0].name,
         'final_measurement': {
-                'metrics': [{'metric_id': 'utility', 'value': RESULT }, 
-                            {'metric_id': 'utility_sd', 'value': df['Utility'].std()/df['Utility'].mean()}]
+                'metrics': [{'metric_id': 'utility', 'value': RESULT }]
         }
         })
     
