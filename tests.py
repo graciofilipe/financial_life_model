@@ -104,9 +104,6 @@ class TestSotcksAndSharesISA(unittest.TestCase):
         self.isa.grow_per_year()
         self.assertEqual(self.isa.asset_value, 101)
 
-if __name__ == '__main__':
-    unittest.main()
-
 
 
 
@@ -152,7 +149,8 @@ class TestHuman(unittest.TestCase):
     def setUp(self):
         self.living_costs = {2024: 30000, 2025: 31000}
         self.pension_draw_down_function = lambda x,y,z,w: 10000  # Simple function for testing
-        self.human = Human(starting_cash=50000, living_costs=self.living_costs, pension_draw_down_function=self.pension_draw_down_function)
+        self.human = Human(starting_cash=50000, living_costs=self.living_costs, 
+        pension_draw_down_function=self.pension_draw_down_function, non_linear_utility=0.5)
 
     def test_initial_values(self):
         self.assertEqual(self.human.cash, 50000)
@@ -162,7 +160,7 @@ class TestHuman(unittest.TestCase):
     def test_buy_utility(self):
         self.human.buy_utility(1000)
         self.assertEqual(self.human.cash, 49000)
-        self.assertEqual(self.human.utility, [1000])
+        self.assertEqual(self.human.utility, [1000**self.human.non_linear_utility])
 
     def test_put_in_cash(self):
         self.human.put_in_cash(2000)
@@ -200,15 +198,6 @@ class TestEmployment(unittest.TestCase):
     def test_get_employer_pension_contributions(self):
         contribution = self.employment.get_employer_pension_contributions(2024)
         self.assertAlmostEqual(contribution, 60000 * 0.07)
-
-if __name__ == '__main__':
-    unittest.main()
-
-
-
-
-
-
 
 
 
