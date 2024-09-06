@@ -3,7 +3,7 @@ steps:
     entrypoint: 'bash'
     args:
       - '-c'
-      - 'pip install - r requirements.txt && python -m unittest discover -s .'
+      - 'pip install -r requirements.txt && python -m unittest discover -s .'
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - build
