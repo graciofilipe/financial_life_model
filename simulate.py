@@ -144,7 +144,9 @@ def simulate_a_life(args):
 
         utility_desired = max(args.utility_base, min(args.utility_cap, income_after_tax*utility_income_multiplier + \
                                                 get_last_element_or_zero(pension_list)*utility_pension_multiplier + \
-                                                (my_ISA.asset_value + my_gia.asset_value)*utility_investments_multiplier))
+                                                (my_ISA.asset_value + my_gia.asset_value)*utility_investments_multiplier + \
+                                                 args.utility_total_assets_years_left_multiplier*(args.final_year - year)*get_last_element_or_zero(TOTAL_ASSETS_list)))
+        
         #don't buy more utility than I have in assets and never more than utility_cap
         # I can't buy more utility than I have in ISA AND GIA combined and I don't want to buy more than 100k
 
