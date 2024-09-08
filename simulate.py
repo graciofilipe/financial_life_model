@@ -28,17 +28,24 @@ def simulate_a_life(args):
     all_tax_list = []
     income_after_tax_list = []
     cash_list = []
-    pension_allowance_list
     pension_list = []
     ISA_list = []
     GIA_list = [] 
     living_costs_list = []
-    ammount_taken_from_gia_list = []
+    taken_from_gia_list = []
     TOTAL_ASSETS_list = []
-    money_invested_in_ISA = []
-    money_invested_in_GIA = []
+    invested_in_ISA_list = []
+    invested_in_GIA_list = []
     utility_i_can_afford_list = []
     utility_desired_list = []
+    extra_cash_needed_to_pay_living_costs_list = []
+    extra_cash_needed_all_list = []
+    unpaid_living_costs_list = []
+    to_take_from_gia_list = []
+    extra_cash_needed_after_gia_list = []
+    to_take_from_ISA_list = []
+    extra_cash_needed_after_gia_and_isa_list = []
+    
 
 
     #bucket_name = args.bucket_name
@@ -50,7 +57,6 @@ def simulate_a_life(args):
     my_pension = PensionAccount(initial_value=args.pension_capital, growth_rate=args.pension_growth_rate)
     my_ISA = SotcksAndSharesISA(initial_value=args.ISA_capital, growth_rate=args.ISA_growth_rate)
     my_gia = GeneralInvestmentAccount(initial_value=args.GIA_capital, growth_rate=args.GIA_growth_rate)
-
 
     filipe = Human(starting_cash=args.starting_cash,
                    living_costs=generate_living_costs(), 
@@ -93,11 +99,11 @@ def simulate_a_life(args):
 
 
         # pension draw down (need to do this before tax because pension income is taxable)
-        amount_to_take_from_pension_pot = filipe.pension_draw_down_function(pot_value=my_pension.asset_value,
-                                                                                   current_year=year,
-                                                                                   retirement_year=args.retirement_year,
-                                                                                   final_year=args.final_year)
-        taken_from_pension = my_pension.get_money(amount_to_take_from_pension_pot)
+        to_take_from_pension_pot = filipe.pension_draw_down_function(pot_value=my_pension.asset_value,
+                                                                            current_year=year,
+                                                                            retirement_year=args.retirement_year,
+                                                                            final_year=args.final_year)
+        taken_from_pension = my_pension.get_money(to_take_from_pension_pot)
 
         ## Calculate TAXES ##
         if year == args.retirement_year:
@@ -125,10 +131,10 @@ def simulate_a_life(args):
         living_costs = filipe.living_costs[year]
         if living_costs < filipe.cash:
             _ = filipe.get_from_cash(filipe.living_costs[year])
-            amount_needed_to_pay_living_costs = 0 
+            extra_cash_needed_to_pay_living_costs = 0 
         else:
-            amount_taken = filipe.get_from_cash(filipe.cash - 1)
-            amount_needed_to_pay_living_costs = living_costs - amount_taken
+            taken = filipe.get_from_cash(filipe.cash - 1)
+            extra_cash_needed_to_pay_living_costs = living_costs - taken
         
 
         # Now deal with Utility (I have to deal with this now so I know how much I need to take from GIA) 
@@ -152,76 +158,81 @@ def simulate_a_life(args):
 
 
         # CAPITAL GAINS (and accessing GIA if I need it for other reasons)
-        amount_needed = max(args.buffer_multiplier*filipe.living_costs[year] + \
-                                   utility_desired + \
-                                   amount_needed_to_pay_living_costs + \
-                                   get_last_element_or_zero(capital_gains_tax_list) - \
-                                   filipe.cash, 
-                                   0)
+        extra_cash_needed_all = max(args.buffer_multiplier*filipe.living_costs[year] + \
+                                            utility_desired + \
+                                            extra_cash_needed_to_pay_living_costs + \
+                                            get_last_element_or_zero(capital_gains_tax_list) - \
+                                            filipe.cash, 
+                                            0)
 
-        amount_to_take_from_gia = min(my_gia.asset_value, amount_needed)
+        to_take_from_gia = min(my_gia.asset_value, extra_cash_needed_all)
 
-        amount_needed_from_elsewhere = max(0, amount_needed - amount_to_take_from_gia)
-        
-        if amount_needed_from_elsewhere > 0:
-            amount_to_take_from_ISA = min(my_ISA.asset_value, amount_needed_from_elsewhere)
-            isa_money = my_ISA.get_money(amount=amount_to_take_from_ISA)
-            filipe.put_in_cash(isa_money)
-            amount_needed_from_elsewhere -= isa_money
-        
-        if amount_to_take_from_gia <= 0:
+               
+        if to_take_from_gia <= 0:
             if args.CG_strategy == "harvest" and my_gia.asset_value > 1:
-                amount_taken_from_gia, capital_gains = my_gia.get_money(my_gia.asset_value-1)
-                my_gia.put_money(amount_taken_from_gia)
+                taken_from_gia, capital_gains = my_gia.get_money(my_gia.asset_value-1)
+                my_gia.put_money(taken_from_gia)
                 capital_gains_tax = hmrc.capital_gains_tax_due(capital_gains)
 
             elif args.CG_strategy == "let_grow":
                 capital_gains = 0
                 capital_gains_tax = 0
         
-        elif amount_to_take_from_gia > 1:
+        elif to_take_from_gia > 1:
             if args.CG_strategy == "harvest" and my_gia.asset_value > 1:
-                amount_taken_from_gia, capital_gains = my_gia.get_money(my_gia.asset_value-1)
-                my_gia.put_money(amount_taken_from_gia - amount_to_take_from_gia)
+                taken_from_gia, capital_gains = my_gia.get_money(my_gia.asset_value-1)
+                my_gia.put_money(taken_from_gia - to_take_from_gia)
                 capital_gains_tax = hmrc.capital_gains_tax_due(capital_gains)
 
             elif args.CG_strategy == "let_grow":
-                extra_cash, capital_gains = my_gia.get_money(amount_needed_from_gia)
+                extra_cash, capital_gains = my_gia.get_money(extra_cash_needed_from_gia)
                 filipe.put_in_cash(extra_cash)
                 capital_gains_tax = hmrc.capital_gains_tax_due(capital_gains)
 
+        filipe.put_in_cash(to_take_from_gia)
 
-        filipe.put_in_cash(amount_to_take_from_gia)
+
+        extra_cash_needed_after_gia = max(0, extra_cash_needed_all - to_take_from_gia)
+        if extra_cash_needed_after_gia > 0:
+            to_take_from_ISA = min(my_ISA.asset_value, extra_cash_needed_after_gia)
+            taken_from_isa = my_ISA.get_money(amount=to_take_from_ISA)
+            filipe.put_in_cash(taken_from_isa)
+            extra_cash_needed_after_gia_and_isa = extra_cash_needed_after_gia - taken_from_isa
+        else:
+            extra_cash_needed_after_gia_and_isa = 0
+            to_take_from_ISA = 0
+
+
 
         # PAY THE REMAINING LIVING COSTS
-        if filipe.cash >  amount_needed_to_pay_living_costs:
-            _ = filipe.get_from_cash(amount_needed_to_pay_living_costs)
-            amount_needed_to_pay_living_costs = 0
+        if filipe.cash >  extra_cash_needed_to_pay_living_costs:
+            _ = filipe.get_from_cash(extra_cash_needed_to_pay_living_costs)
+            unpaid_living_costs = 0
         else:
-            amount_payed_living_costs = filipe.get_from_cash(filipe.cash-1)
-            amount_needed_to_pay_living_costs -= amount_payed_living_costs
+            payed_living_costs = filipe.get_from_cash(filipe.cash-1)
+            unpaid_living_costs = extra_cash_needed_to_pay_living_costs - payed_living_costs
                 
         
         ## AFTER I PAY TAXES AND LIVING EXPENSES, I INVEST OR BUY UTILITY ##
         # I couldn't find the following money so I need to take it from the utility desired
 
-        if amount_needed_to_pay_living_costs > 0:
-            filipe.utility.append(-(amount_needed_to_pay_living_costs)**1.2) # exp penalty for negative utility
-            utility_i_can_afford = - amount_needed_to_pay_living_costs
+        if unpaid_living_costs > 0:
+            filipe.utility.append(-(unpaid_living_costs)**1.2) # exp penalty for negative utility
+            utility_i_can_afford = - unpaid_living_costs
         else:
-            utility_i_can_afford = max(0, utility_desired - amount_needed_from_elsewhere - amount_needed_to_pay_living_costs)
+            utility_i_can_afford = max(0, utility_desired - extra_cash_needed_after_gia_and_isa - extra_cash_needed_to_pay_living_costs)
             filipe.buy_utility(utility_i_can_afford)
 
 
         # INVEST FOR NEXT YEAR #
-        amount_available = max(0, filipe.cash - args.buffer_multiplier*filipe.living_costs[year])
+        available = max(0, filipe.cash - args.buffer_multiplier*filipe.living_costs[year])
 
-        money_for_ISA = filipe.get_from_cash(min(20000, amount_available))
+        money_for_ISA = filipe.get_from_cash(min(20000, available))
         if money_for_ISA > 1:
             my_ISA.put_money(money_for_ISA)
-            amount_available = max(0, amount_available - money_for_ISA)
+            available = max(0, available - money_for_ISA)
         
-        money_for_gia = filipe.get_from_cash(amount_available)
+        money_for_gia = filipe.get_from_cash(available)
         if money_for_gia > 1:
             my_gia.put_money(money_for_gia)
         
@@ -229,7 +240,7 @@ def simulate_a_life(args):
 
         # LOG VALUES
         cash_list.append(filipe.cash)
-        ammount_taken_from_gia_list.append(amount_taken_from_gia)
+        taken_from_gia_list.append(taken_from_gia)
         pension_list.append(my_pension.asset_value)
         ISA_list.append(my_ISA.asset_value)
         GIA_list.append(my_gia.asset_value)
@@ -247,13 +258,19 @@ def simulate_a_life(args):
         national_insurance_due_list.append(ni_due)
         income_after_tax_list.append(income_after_tax)
         living_costs_list.append(filipe.living_costs[year])
-        money_invested_in_ISA.append(money_for_ISA)
-        money_invested_in_GIA.append(money_for_gia)
+        invested_in_ISA_list.append(money_for_ISA)
+        invested_in_GIA_list.append(money_for_gia)
         utility_i_can_afford_list.append(utility_i_can_afford)
         utility_desired_list.append(utility_desired)
+        extra_cash_needed_to_pay_living_costs_list.append(extra_cash_needed_to_pay_living_costs)
+        extra_cash_needed_all_list.append(extra_cash_needed_all)
         TOTAL_ASSETS_list.append(total_assets)
+        to_take_from_gia_list.append(to_take_from_gia)
+        extra_cash_needed_after_gia_list.append(extra_cash_needed_after_gia)
+        to_take_from_ISA_list.append(to_take_from_ISA)
+        extra_cash_needed_after_gia_and_isa_list.append(extra_cash_needed_after_gia_and_isa)
+        unpaid_living_costs_list.append(unpaid_living_costs)
 
-    
 
     total_ut = round(sum(filipe.utility))
     import numpy_financial as npf
@@ -272,7 +289,7 @@ def simulate_a_life(args):
         'Income Tax Due': income_tax_due_list,
         'National Insurance Due': national_insurance_due_list,
         'Total Tax': all_tax_list,
-        'Amount taken from GIA': ammount_taken_from_gia_list,
+        'Amount taken from GIA': taken_from_gia_list,
         'Living Costs': living_costs_list,
         'Income After Tax': income_after_tax_list,
         'Cash': cash_list,
@@ -283,8 +300,17 @@ def simulate_a_life(args):
         'Utility Desired': utility_desired_list,
         'Utility': filipe.utility,
         'Total Assets': TOTAL_ASSETS_list,
-        'Money Invested in ISA': money_invested_in_ISA,
-        'Money Invested in GIA': money_invested_in_GIA,
+        'Money Invested in ISA': invested_in_ISA_list,
+        'Money Invested in GIA': invested_in_GIA_list,
+        'Extra Cash Needed to Pay Living Costs': extra_cash_needed_to_pay_living_costs_list,
+        'Extra Cash Needed All': extra_cash_needed_all_list,
+        'Unpaid Living Costs': unpaid_living_costs_list,
+        'To Take from GIA': to_take_from_gia_list,
+        'Extra Cash Needed After GIA': extra_cash_needed_after_gia_list,
+        'To Take from ISA': to_take_from_ISA_list,
+        'Extra Cash Needed After GIA and ISA': extra_cash_needed_after_gia_and_isa_list,
+        'Unpaid Living Costs': unpaid_living_costs_list,
+
     }, index=range(args.start_year, args.final_year))
 
     print('TOTAL UTILITY ,' , total_ut)

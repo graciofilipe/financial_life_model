@@ -139,12 +139,12 @@ if __name__ == "__main__":
     param_utility_total_assets_years_left_multiplier = {
     'parameter_id': 'total_assets_years_left_multiplier',
     'double_value_spec': {
-        'min_value': -3.0,
-        'max_value': 3.0
+        'min_value': -0.1,
+        'max_value': 0.1
     }}
 
     metric_utility = {
-        'metric_id': 'utility',
+        'metric_id': 'discounted_utility',
         'goal': 'MAXIMIZE'
     }
 
@@ -200,7 +200,7 @@ if __name__ == "__main__":
             vizier_client.complete_trial({
             'name': suggest_response.result().trials[0].name,
             'final_measurement': {
-                    'metrics': [{'metric_id': 'utility', 'value': RESULT }]
+                    'metrics': [{'metric_id': 'discounted_utility', 'value': RESULT }]
             }
             })
     

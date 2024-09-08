@@ -12,7 +12,7 @@ def generate_salary():
 
 def linear_pension_draw_down_function(pot_value, current_year, retirement_year, final_year):
     if current_year == retirement_year:
-        return 0.25*pot_value
+        return min(0.25*pot_value, 260000)
     elif current_year < retirement_year:
         return 0
     else:
