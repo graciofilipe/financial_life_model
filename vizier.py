@@ -29,7 +29,7 @@ if __name__ == "__main__":
     parser.add_argument("--final_year", required=False, default=2074)
     parser.add_argument("--retirement_year", required=False, default=2054)
     
-    parser.add_argument("--starting_cash", required=False, default=55000)
+    parser.add_argument("--starting_cash", required=False, default=25000)
     
     parser.add_argument("--fixed_interest_capital", required=False, default=1000)
     parser.add_argument("--fixed_interest_rate", required=False, default=0.02)
@@ -50,34 +50,33 @@ if __name__ == "__main__":
 
     parser.add_argument("--buffer_multiplier", required=False, default=1.2)
 
-    parser.add_argument("--utility_income_multiplier_ret", required=False, default=0.5)
-    parser.add_argument("--utility_investments_multiplier_ret", required=False, default=0.1)
-    parser.add_argument("--utility_pension_multiplier_ret", required=False, default=0.03)
+    # parser.add_argument("--utility_income_multiplier_ret", required=False, default=0.5)
+    # parser.add_argument("--utility_investments_multiplier_ret", required=False, default=0.1)
+    # parser.add_argument("--utility_pension_multiplier_ret", required=False, default=0.03)
     
-    parser.add_argument("--utility_income_multiplier_work", required=False, default=0.5)
-    parser.add_argument("--utility_investments_multiplier_work", required=False, default=0.1)
-    parser.add_argument("--utility_pension_multiplier_work", required=False, default=0.03)
+    # parser.add_argument("--utility_income_multiplier_work", required=False, default=0.5)
+    # parser.add_argument("--utility_investments_multiplier_work", required=False, default=0.1)
+    # parser.add_argument("--utility_pension_multiplier_work", required=False, default=0.03)
 
-    parser.add_argument("--utility_total_assets_years_left_multiplier", required=False, default=0)
+    # parser.add_argument("--utility_total_assets_years_left_multiplier", required=False, default=0)
     
-    parser.add_argument("--utility_base", required=False, default=5000)
-    parser.add_argument("--utility_cap", required=False, default=1500000)
-
+    # parser.add_argument("--utility_base", required=False, default=5000)
+    # parser.add_argument("--utility_cap", required=False, default=1500000)
         
-    parser.add_argument("--utility_2024_2029", required=False, default=30000)
-    parser.add_argument("--utility_2030_2034", required=False, default=30000)
-    parser.add_argument("--utility_2035_2039", required=False, default=30000)
-    parser.add_argument("--utility_2040_2044", required=False, default=30000)
-    parser.add_argument("--utility_2045_2049", required=False, default=30000)
-    parser.add_argument("--utility_2050_2054", required=False, default=30000)
-    parser.add_argument("--utility_2055_2059", required=False, default=30000)
-    parser.add_argument("--utility_2060_2064", required=False, default=30000)
-    parser.add_argument("--utility_2065_2069", required=False, default=30000)
-    parser.add_argument("--utility_2070_2074", required=False, default=30000)
+    # parser.add_argument("--utility_2024_2029", required=False, default=30000)
+    # parser.add_argument("--utility_2030_2034", required=False, default=30000)
+    # parser.add_argument("--utility_2035_2039", required=False, default=30000)
+    # parser.add_argument("--utility_2040_2044", required=False, default=30000)
+    # parser.add_argument("--utility_2045_2049", required=False, default=30000)
+    # parser.add_argument("--utility_2050_2054", required=False, default=30000)
+    # parser.add_argument("--utility_2055_2059", required=False, default=30000)
+    # parser.add_argument("--utility_2060_2064", required=False, default=30000)
+    # parser.add_argument("--utility_2065_2069", required=False, default=30000)
+    # parser.add_argument("--utility_2070_2074", required=False, default=30000)
 
 
-    parser.add_argument("--non_linear_utility", required=False, default=0.99)
-    parser.add_argument("--utility_discount_rate", required=False, default=0.01)
+    parser.add_argument("--non_linear_utility", required=False, default=0.95)
+    parser.add_argument("--utility_discount_rate", required=False, default=0.02)
 
     args = parser.parse_args()
 
@@ -92,143 +91,142 @@ if __name__ == "__main__":
     
     
 
-    param_utility_income_multiplier_work = {
-    'parameter_id': 'utility_income_multiplier_work',
-    'double_value_spec': {
-        'min_value': 0.01,
-        'max_value': 1.2
-    }}
+    # param_utility_income_multiplier_work = {
+    # 'parameter_id': 'utility_income_multiplier_work',
+    # 'double_value_spec': {
+    #     'min_value': 0.01,
+    #     'max_value': 1.2
+    # }}
 
-    param_utility_investments_multiplier_work = {
-    'parameter_id': 'utility_investments_multiplier_work',
-    'double_value_spec': {
-        'min_value': 0.01,
-        'max_value': 0.5
-    }}
+    # param_utility_investments_multiplier_work = {
+    # 'parameter_id': 'utility_investments_multiplier_work',
+    # 'double_value_spec': {
+    #     'min_value': 0.01,
+    #     'max_value': 0.5
+    # }}
 
-    param_utility_pension_multiplier_work = {
-    'parameter_id': 'utility_pension_multiplier_work',
-    'double_value_spec': {
-        'min_value': 0.01,
-        'max_value': 0.2
-    }}
+    # param_utility_pension_multiplier_work = {
+    # 'parameter_id': 'utility_pension_multiplier_work',
+    # 'double_value_spec': {
+    #     'min_value': 0.01,
+    #     'max_value': 0.2
+    # }}
 
 
-    param_utility_income_multiplier_ret = {
-    'parameter_id': 'utility_income_multiplier_ret',
-    'double_value_spec': {
-        'min_value': 0.01,
-        'max_value': 2
-    }}
+    # param_utility_income_multiplier_ret = {
+    # 'parameter_id': 'utility_income_multiplier_ret',
+    # 'double_value_spec': {
+    #     'min_value': 0.01,
+    #     'max_value': 2
+    # }}
 
-    param_utility_investments_multiplier_ret = {
-    'parameter_id': 'utility_investments_multiplier_ret',
-    'double_value_spec': {
-        'min_value': 0.01,
-        'max_value': 2
-    }}
+    # param_utility_investments_multiplier_ret = {
+    # 'parameter_id': 'utility_investments_multiplier_ret',
+    # 'double_value_spec': {
+    #     'min_value': 0.01,
+    #     'max_value': 2
+    # }}
 
-    param_utility_pension_multiplier_ret = {
-    'parameter_id': 'utility_pension_multiplier_ret',
-    'double_value_spec': {
-        'min_value': 0.01,
-        'max_value': 2
-    }}
+    # param_utility_pension_multiplier_ret = {
+    # 'parameter_id': 'utility_pension_multiplier_ret',
+    # 'double_value_spec': {
+    #     'min_value': 0.01,
+    #     'max_value': 2
+    # }}
 
-    param_utility_base = {
-    'parameter_id': 'utility_base',
+    # param_utility_base = {
+    # 'parameter_id': 'utility_base',
+    # 'double_value_spec': {
+    #     'min_value': 5000,
+    #     'max_value': 15000
+    # }}
+
+    # param_utility_cap = {
+    # 'parameter_id': 'utility_cap',
+    # 'double_value_spec': {
+    #     'min_value': 15001,
+    #     'max_value': 1000000
+    # }}
+        
+    # param_utility_total_assets_years_left_multiplier = {
+    # 'parameter_id': 'total_assets_years_left_multiplier',
+    # 'double_value_spec': {
+    #     'min_value': -0.1,
+    #     'max_value': 0.1
+    # }}
+
+
+    param_utility_2024_2029 = {
+    'parameter_id': 'utility_2024_2029',
     'double_value_spec': {
         'min_value': 5000,
-        'max_value': 15000
+        'max_value': 100000
     }}
 
-    param_utility_cap = {
-    'parameter_id': 'utility_cap',
+    param_utility_2030_2034 = {
+    'parameter_id': 'utility_2030_2034',
     'double_value_spec': {
-        'min_value': 15001,
+        'min_value': 5000,
+        'max_value': 100000
+    }}
+
+    param_utility_2035_2039 = {
+    'parameter_id': 'utility_2035_2039',
+    'double_value_spec': {
+        'min_value': 5000,
+        'max_value': 500000
+    }}
+
+    param_utility_2040_2044 = {
+    'parameter_id': 'utility_2040_2044',
+    'double_value_spec': {
+        'min_value': 5000,
+        'max_value': 500000
+    }}
+
+    param_utility_2045_2049 = {
+    'parameter_id': 'utility_2045_2049',
+    'double_value_spec': {
+        'min_value': 5000,
+        'max_value': 500000
+    }}
+
+    param_utility_2050_2054 = {
+    'parameter_id': 'utility_2050_2054',
+    'double_value_spec': {
+        'min_value': 5000,
         'max_value': 1000000
     }}
-        
-    param_utility_total_assets_years_left_multiplier = {
-    'parameter_id': 'total_assets_years_left_multiplier',
+
+    param_utility_2055_2059 = {
+    'parameter_id': 'utility_2055_2059',
     'double_value_spec': {
-        'min_value': -0.1,
-        'max_value': 0.1
+        'min_value': 5000,
+        'max_value': 1000000
     }}
 
+    param_utility_2060_2064 = {
+    'parameter_id': 'utility_2060_2064',
+    'double_value_spec': {
+        'min_value': 5000,
+        'max_value': 1000000
+    }}
 
-    # param_utility_2024_2029 = {
-    # 'parameter_id': 'utility_2024_2029',
-    # 'double_value_spec': {
-    #     'min_value': 5000,
-    #     'max_value': 1000000
-    # }}
+    param_utility_2065_2069 = {
+    'parameter_id': 'utility_2065_2069',
+    'double_value_spec': {
+        'min_value': 5000,
+        'max_value': 1000000
+    }}
 
-    # param_utility_2030_2034 = {
-    # 'parameter_id': 'utility_2030_2034',
-    # 'double_value_spec': {
-    #     'min_value': 5000,
-    #     'max_value': 1000000
-    # }}
-
-    # param_utility_2035_2039 = {
-    # 'parameter_id': 'utility_2035_2039',
-    # 'double_value_spec': {
-    #     'min_value': 5000,
-    #     'max_value': 1000000
-    # }}
-
-    # param_utility_2040_2044 = {
-    # 'parameter_id': 'utility_2040_2044',
-    # 'double_value_spec': {
-    #     'min_value': 5000,
-    #     'max_value': 1000000
-    # }}
-
-    # param_utility_2045_2049 = {
-    # 'parameter_id': 'utility_2045_2049',
-    # 'double_value_spec': {
-    #     'min_value': 5000,
-    #     'max_value': 1000000
-    # }}
-
-    # param_utility_2050_2054 = {
-    # 'parameter_id': 'utility_2050_2054',
-    # 'double_value_spec': {
-    #     'min_value': 5000,
-    #     'max_value': 1000000
-    # }}
-
-    # param_utility_2055_2059 = {
-    # 'parameter_id': 'utility_2055_2059',
-    # 'double_value_spec': {
-    #     'min_value': 5000,
-    #     'max_value': 1000000
-    # }}
-
-    # param_utility_2060_2064 = {
-    # 'parameter_id': 'utility_2060_2064',
-    # 'double_value_spec': {
-    #     'min_value': 5000,
-    #     'max_value': 1000000
-    # }}
-
-    # param_utility_2065_2069 = {
-    # 'parameter_id': 'utility_2065_2069',
-    # 'double_value_spec': {
-    #     'min_value': 5000,
-    #     'max_value': 1000000
-    # }}
-
-    # param_utility_2070_2074 = {
-    # 'parameter_id': 'utility_2070_2074',
-    # 'double_value_spec': {
-    #     'min_value': 5000,
-    #     'max_value': 1000000
-    # }}
+    param_utility_2070_2074 = {
+    'parameter_id': 'utility_2070_2074',
+    'double_value_spec': {
+        'min_value': 5000,
+        'max_value': 1000000
+    }}
 
     
-
 
     metric_utility = {
         'metric_id': 'discounted_utility',
@@ -240,12 +238,12 @@ if __name__ == "__main__":
         'display_name': STUDY_DISPLAY_NAME,
         'study_spec': {
         'algorithm': 'ALGORITHM_UNSPECIFIED',
-        'parameters': [param_utility_income_multiplier_work, param_utility_investments_multiplier_work, param_utility_pension_multiplier_work,
-                      param_utility_income_multiplier_ret, param_utility_investments_multiplier_ret, param_utility_pension_multiplier_ret,
-                      param_utility_base, param_utility_cap, param_utility_total_assets_years_left_multiplier],
-        # 'parameters': [param_utility_2024_2029, param_utility_2030_2034, param_utility_2035_2039,
-        #                  param_utility_2040_2044, param_utility_2045_2049, param_utility_2050_2054, param_utility_2055_2059, param_utility_2060_2064, 
-        #                  param_utility_2065_2069, param_utility_2070_2074],
+        # 'parameters': [param_utility_income_multiplier_work, param_utility_investments_multiplier_work, param_utility_pension_multiplier_work,
+        #               param_utility_income_multiplier_ret, param_utility_investments_multiplier_ret, param_utility_pension_multiplier_ret,
+        #               param_utility_base, param_utility_cap, param_utility_total_assets_years_left_multiplier],
+        'parameters': [param_utility_2024_2029, param_utility_2030_2034, param_utility_2035_2039,
+                         param_utility_2040_2044, param_utility_2045_2049, param_utility_2050_2054, param_utility_2055_2059, param_utility_2060_2064, 
+                         param_utility_2065_2069, param_utility_2070_2074],
         'metrics': [metric_utility],
         }
     }
@@ -268,29 +266,28 @@ if __name__ == "__main__":
 
             dd = {x.parameter_id: x.value for x in suggest_response.result().trials[0].parameters}
             
-            args.utility_income_multiplier_work = dd['utility_income_multiplier_work']
-            args.utility_investments_multiplier_work = dd['utility_investments_multiplier_work']
-            args.utility_pension_multiplier_work = dd['utility_pension_multiplier_work']
+            # args.utility_income_multiplier_work = dd['utility_income_multiplier_work']
+            # args.utility_investments_multiplier_work = dd['utility_investments_multiplier_work']
+            # args.utility_pension_multiplier_work = dd['utility_pension_multiplier_work']
 
-            args.utility_income_multiplier_ret = dd['utility_income_multiplier_ret']
-            args.utility_investments_multiplier_ret = dd['utility_investments_multiplier_ret']
-            args.utility_pension_multiplier_ret = dd['utility_pension_multiplier_ret']
+            # args.utility_income_multiplier_ret = dd['utility_income_multiplier_ret']
+            # args.utility_investments_multiplier_ret = dd['utility_investments_multiplier_ret']
+            # args.utility_pension_multiplier_ret = dd['utility_pension_multiplier_ret']
 
-            args.utility_total_assets_years_left_multiplier = dd['total_assets_years_left_multiplier']
-
-            args.utility_cap = dd['utility_cap']
-            args.utility_base = dd['utility_base']
+            # args.utility_total_assets_years_left_multiplier = dd['total_assets_years_left_multiplier']
+            # args.utility_cap = dd['utility_cap']
+            # args.utility_base = dd['utility_base']
   
-            # args.utility_2024_2029 = dd['utility_2024_2029']
-            # args.utility_2030_2034 = dd['utility_2030_2034']
-            # args.utility_2035_2039 = dd['utility_2035_2039']
-            # args.utility_2040_2044 = dd['utility_2040_2044']
-            # args.utility_2045_2049 = dd['utility_2045_2049']
-            # args.utility_2050_2054 = dd['utility_2050_2054']
-            # args.utility_2055_2059 = dd['utility_2055_2059']
-            # args.utility_2060_2064 = dd['utility_2060_2064']
-            # args.utility_2065_2069 = dd['utility_2065_2069']
-            # args.utility_2070_2074 = dd['utility_2070_2074']         
+            args.utility_2024_2029 = dd['utility_2024_2029']
+            args.utility_2030_2034 = dd['utility_2030_2034']
+            args.utility_2035_2039 = dd['utility_2035_2039']
+            args.utility_2040_2044 = dd['utility_2040_2044']
+            args.utility_2045_2049 = dd['utility_2045_2049']
+            args.utility_2050_2054 = dd['utility_2050_2054']
+            args.utility_2055_2059 = dd['utility_2055_2059']
+            args.utility_2060_2064 = dd['utility_2060_2064']
+            args.utility_2065_2069 = dd['utility_2065_2069']
+            args.utility_2070_2074 = dd['utility_2070_2074']         
 
 
 
@@ -311,30 +308,29 @@ if __name__ == "__main__":
             
             optimal_parameters = {x.parameter_id: x.value for x in opt_trial.optimal_trials[0].parameters}
             
-            args.utility_income_multiplier_work = optimal_parameters['utility_income_multiplier_work']
-            args.utility_investments_multiplier_work = optimal_parameters['utility_investments_multiplier_work']
-            args.utility_pension_multiplier_work = optimal_parameters['utility_pension_multiplier_work']
+            # args.utility_income_multiplier_work = optimal_parameters['utility_income_multiplier_work']
+            # args.utility_investments_multiplier_work = optimal_parameters['utility_investments_multiplier_work']
+            # args.utility_pension_multiplier_work = optimal_parameters['utility_pension_multiplier_work']
 
-            args.utility_income_multiplier_ret = optimal_parameters['utility_income_multiplier_ret']
-            args.utility_investments_multiplier_ret = optimal_parameters['utility_investments_multiplier_ret']
-            args.utility_pension_multiplier_ret = optimal_parameters['utility_pension_multiplier_ret']
+            # args.utility_income_multiplier_ret = optimal_parameters['utility_income_multiplier_ret']
+            # args.utility_investments_multiplier_ret = optimal_parameters['utility_investments_multiplier_ret']
+            # args.utility_pension_multiplier_ret = optimal_parameters['utility_pension_multiplier_ret']
 
-            args.utility_total_assets_years_left_multiplier = optimal_parameters['total_assets_years_left_multiplier']
+            # args.utility_total_assets_years_left_multiplier = optimal_parameters['total_assets_years_left_multiplier']
 
+            # args.utility_cap = optimal_parameters['utility_cap']
+            # args.utility_bsae = optimal_parameters['utility_base']
             
-            args.utility_cap = optimal_parameters['utility_cap']
-            args.utility_bsae = optimal_parameters['utility_base']
-            
-            # args.utility_2024_2029 = optimal_parameters['utility_2024_2029']
-            # args.utility_2030_2034 = optimal_parameters['utility_2030_2034']
-            # args.utility_2035_2039 = optimal_parameters['utility_2035_2039']
-            # args.utility_2040_2044 = optimal_parameters['utility_2040_2044']
-            # args.utility_2045_2049 = optimal_parameters['utility_2045_2049']
-            # args.utility_2050_2054 = optimal_parameters['utility_2050_2054']
-            # args.utility_2055_2059 = optimal_parameters['utility_2055_2059']
-            # args.utility_2060_2064 = optimal_parameters['utility_2060_2064']
-            # args.utility_2065_2069 = optimal_parameters['utility_2065_2069']
-            # args.utility_2070_2074 = optimal_parameters['utility_2070_2074']         
+            args.utility_2024_2029 = optimal_parameters['utility_2024_2029']
+            args.utility_2030_2034 = optimal_parameters['utility_2030_2034']
+            args.utility_2035_2039 = optimal_parameters['utility_2035_2039']
+            args.utility_2040_2044 = optimal_parameters['utility_2040_2044']
+            args.utility_2045_2049 = optimal_parameters['utility_2045_2049']
+            args.utility_2050_2054 = optimal_parameters['utility_2050_2054']
+            args.utility_2055_2059 = optimal_parameters['utility_2055_2059']
+            args.utility_2060_2064 = optimal_parameters['utility_2060_2064']
+            args.utility_2065_2069 = optimal_parameters['utility_2065_2069']
+            args.utility_2070_2074 = optimal_parameters['utility_2070_2074']         
 
 
             RESULT, df = simulate_a_life(args)

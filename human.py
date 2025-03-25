@@ -20,10 +20,13 @@ class Human:
 
         if ammount_to_get >= self.cash:
             logging.warning(msg=f"Not enough money in CASH: returned none")
-            return 0
-        else:
-            self.cash -= ammount_to_get
-            return ammount_to_get
+            print('the amount I have is ', self.cash, ' but you asked me for ', ammount_to_get)
+            print('the latest utility ', self.utility[-1])
+            self.utility[-1] -= (self.cash - ammount_to_get)**2 # it hurts to go into overdraft
+            print('now changed to ', self.utility[-1])
+        self.cash -= ammount_to_get
+        
+        return ammount_to_get
 
 class Employment:
     def __init__(self, gross_salary, employee_pension_contributions_pct=0.07, employer_pension_contributions_pct=0.07):

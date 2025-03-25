@@ -64,58 +64,58 @@ def simulate_a_life(args):
                    non_linear_utility=args.non_linear_utility,
                    pension_draw_down_function=linear_pension_draw_down_function)
     
-    # utility_dict = {2024: int(args.utility_2024_2029),
-    #             2025: int(args.utility_2024_2029),
-    #             2026: int(args.utility_2024_2029),
-    #             2027: int(args.utility_2024_2029),
-    #             2028: int(args.utility_2024_2029),
-    #             2029: int(args.utility_2024_2029),
-    #             2030: int(args.utility_2030_2034),
-    #             2031: int(args.utility_2030_2034),
-    #             2032: int(args.utility_2030_2034),
-    #             2033: int(args.utility_2030_2034),
-    #             2034: int(args.utility_2030_2034),
-    #             2035: int(args.utility_2035_2039),
-    #             2036: int(args.utility_2035_2039),
-    #             2037: int(args.utility_2035_2039),
-    #             2038: int(args.utility_2035_2039),
-    #             2039: int(args.utility_2035_2039),
-    #             2040: int(args.utility_2040_2044),
-    #             2041: int(args.utility_2040_2044),
-    #             2042: int(args.utility_2040_2044),
-    #             2043: int(args.utility_2040_2044),
-    #             2044: int(args.utility_2040_2044),
-    #             2045: int(args.utility_2045_2049),
-    #             2046: int(args.utility_2045_2049),
-    #             2047: int(args.utility_2045_2049),
-    #             2048: int(args.utility_2045_2049),
-    #             2049: int(args.utility_2045_2049),
-    #             2050: int(args.utility_2050_2054),
-    #             2051: int(args.utility_2050_2054),
-    #             2052: int(args.utility_2050_2054),
-    #             2053: int(args.utility_2050_2054),
-    #             2054: int(args.utility_2050_2054),
-    #             2055: int(args.utility_2055_2059),
-    #             2056: int(args.utility_2055_2059),
-    #             2057: int(args.utility_2055_2059),
-    #             2058: int(args.utility_2055_2059),
-    #             2059: int(args.utility_2055_2059),
-    #             2060: int(args.utility_2060_2064),
-    #             2061: int(args.utility_2060_2064),
-    #             2062: int(args.utility_2060_2064),
-    #             2063: int(args.utility_2060_2064),
-    #             2064: int(args.utility_2060_2064),
-    #             2065: int(args.utility_2065_2069),
-    #             2066: int(args.utility_2065_2069),
-    #             2067: int(args.utility_2065_2069),
-    #             2068: int(args.utility_2065_2069),
-    #             2069: int(args.utility_2065_2069),
-    #             2070: int(args.utility_2070_2074),
-    #             2071: int(args.utility_2070_2074),
-    #             2072: int(args.utility_2070_2074),
-    #             2073: int(args.utility_2070_2074),
-    #             2074: int(args.utility_2070_2074)
-    #             }
+    utility_dict = {2024: int(args.utility_2024_2029),
+                2025: int(args.utility_2024_2029),
+                2026: int(args.utility_2024_2029),
+                2027: int(args.utility_2024_2029),
+                2028: int(args.utility_2024_2029),
+                2029: int(args.utility_2024_2029),
+                2030: int(args.utility_2030_2034),
+                2031: int(args.utility_2030_2034),
+                2032: int(args.utility_2030_2034),
+                2033: int(args.utility_2030_2034),
+                2034: int(args.utility_2030_2034),
+                2035: int(args.utility_2035_2039),
+                2036: int(args.utility_2035_2039),
+                2037: int(args.utility_2035_2039),
+                2038: int(args.utility_2035_2039),
+                2039: int(args.utility_2035_2039),
+                2040: int(args.utility_2040_2044),
+                2041: int(args.utility_2040_2044),
+                2042: int(args.utility_2040_2044),
+                2043: int(args.utility_2040_2044),
+                2044: int(args.utility_2040_2044),
+                2045: int(args.utility_2045_2049),
+                2046: int(args.utility_2045_2049),
+                2047: int(args.utility_2045_2049),
+                2048: int(args.utility_2045_2049),
+                2049: int(args.utility_2045_2049),
+                2050: int(args.utility_2050_2054),
+                2051: int(args.utility_2050_2054),
+                2052: int(args.utility_2050_2054),
+                2053: int(args.utility_2050_2054),
+                2054: int(args.utility_2050_2054),
+                2055: int(args.utility_2055_2059),
+                2056: int(args.utility_2055_2059),
+                2057: int(args.utility_2055_2059),
+                2058: int(args.utility_2055_2059),
+                2059: int(args.utility_2055_2059),
+                2060: int(args.utility_2060_2064),
+                2061: int(args.utility_2060_2064),
+                2062: int(args.utility_2060_2064),
+                2063: int(args.utility_2060_2064),
+                2064: int(args.utility_2060_2064),
+                2065: int(args.utility_2065_2069),
+                2066: int(args.utility_2065_2069),
+                2067: int(args.utility_2065_2069),
+                2068: int(args.utility_2065_2069),
+                2069: int(args.utility_2065_2069),
+                2070: int(args.utility_2070_2074),
+                2071: int(args.utility_2070_2074),
+                2072: int(args.utility_2070_2074),
+                2073: int(args.utility_2070_2074),
+                2074: int(args.utility_2070_2074)
+                }
 
     hmrc = TaxMan()
     
@@ -191,24 +191,23 @@ def simulate_a_life(args):
             extra_cash_needed_to_pay_living_costs = living_costs - taken
         
 
-        # Now deal with Utility (I have to deal with this now so I know how much I need to take from GIA) 
-        if year >= args.retirement_year:
-            utility_income_multiplier = args.utility_income_multiplier_ret
-            utility_investments_multiplier = args.utility_investments_multiplier_ret
-            utility_pension_multiplier = args.utility_pension_multiplier_ret
-        else:
-            utility_income_multiplier = args.utility_income_multiplier_work
-            utility_investments_multiplier = args.utility_investments_multiplier_work
-            utility_pension_multiplier = args.utility_pension_multiplier_work
+        # # Now deal with Utility (I have to deal with this now so I know how much I need to take from GIA) 
+        # if year >= args.retirement_year:
+        #     utility_income_multiplier = args.utility_income_multiplier_ret
+        #     utility_investments_multiplier = args.utility_investments_multiplier_ret
+        #     utility_pension_multiplier = args.utility_pension_multiplier_ret
+        # else:
+        #     utility_income_multiplier = args.utility_income_multiplier_work
+        #     utility_investments_multiplier = args.utility_investments_multiplier_work
+        #     utility_pension_multiplier = args.utility_pension_multiplier_work
 
 
-        utility_desired = max(args.utility_base, min(args.utility_cap, income_after_tax*utility_income_multiplier + \
-                                                     get_last_element_or_zero(pension_list)*utility_pension_multiplier + \
-                                                    (my_ISA.asset_value + my_gia.asset_value)*utility_investments_multiplier + \
-                                                     args.utility_total_assets_years_left_multiplier*(args.final_year - year)*get_last_element_or_zero(TOTAL_ASSETS_list)))
+        # utility_desired = max(args.utility_base, min(args.utility_cap, income_after_tax*utility_income_multiplier + \
+        #                                              get_last_element_or_zero(pension_list)*utility_pension_multiplier + \
+        #                                             (my_ISA.asset_value + my_gia.asset_value)*utility_investments_multiplier + \
+        #                                              args.utility_total_assets_years_left_multiplier*(args.final_year - year)*get_last_element_or_zero(TOTAL_ASSETS_list)))
 
-        # utility_desired = max(args.utility_base, min(args.utility_cap,
-        #                                             utility_dict[year]))
+        utility_desired = utility_dict[year]
         
         #don't buy more utility than I have in assets and never more than utility_cap
         # I can't buy more utility than I have in ISA AND GIA combined and I don't want to buy more than 100k
@@ -313,7 +312,10 @@ def simulate_a_life(args):
 
 
     total_ut = round(sum(filipe.utility))
-    std_ut = 0#abs(round(np.std(filipe.utility)))**2
+    var_ut = np.var(filipe.utility)
+    std_ut = np.std(filipe.utility)
+    mean_ut = np.mean(filipe.utility)
+    sigma_ut = abs(std_ut/mean_ut)
     import numpy_financial as npf
     discounted_utility = npf.npv(args.utility_discount_rate, filipe.utility).round(0)
 
@@ -354,7 +356,13 @@ def simulate_a_life(args):
 
     }, index=range(args.start_year, args.final_year))
 
+    metric = discounted_utility - 100000*sigma_ut
+    
     print('TOTAL UTILITY ,' , total_ut)
     print('Discounted UTILITY ,' , discounted_utility)
+    print('sigma,' , sigma_ut)
+    print('metric ', metric)
+    print('\n')
+    
 
-    return discounted_utility-std_ut, df
+    return metric, df
