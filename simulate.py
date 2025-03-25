@@ -10,6 +10,7 @@ from datetime import datetime
 from aux_funs import get_last_element_or_zero
 import plotly.express as px
 from google.cloud import storage
+import numpy as np
 
 
 def simulate_a_life(args):
@@ -62,6 +63,59 @@ def simulate_a_life(args):
                    living_costs=generate_living_costs(), 
                    non_linear_utility=args.non_linear_utility,
                    pension_draw_down_function=linear_pension_draw_down_function)
+    
+    # utility_dict = {2024: int(args.utility_2024_2029),
+    #             2025: int(args.utility_2024_2029),
+    #             2026: int(args.utility_2024_2029),
+    #             2027: int(args.utility_2024_2029),
+    #             2028: int(args.utility_2024_2029),
+    #             2029: int(args.utility_2024_2029),
+    #             2030: int(args.utility_2030_2034),
+    #             2031: int(args.utility_2030_2034),
+    #             2032: int(args.utility_2030_2034),
+    #             2033: int(args.utility_2030_2034),
+    #             2034: int(args.utility_2030_2034),
+    #             2035: int(args.utility_2035_2039),
+    #             2036: int(args.utility_2035_2039),
+    #             2037: int(args.utility_2035_2039),
+    #             2038: int(args.utility_2035_2039),
+    #             2039: int(args.utility_2035_2039),
+    #             2040: int(args.utility_2040_2044),
+    #             2041: int(args.utility_2040_2044),
+    #             2042: int(args.utility_2040_2044),
+    #             2043: int(args.utility_2040_2044),
+    #             2044: int(args.utility_2040_2044),
+    #             2045: int(args.utility_2045_2049),
+    #             2046: int(args.utility_2045_2049),
+    #             2047: int(args.utility_2045_2049),
+    #             2048: int(args.utility_2045_2049),
+    #             2049: int(args.utility_2045_2049),
+    #             2050: int(args.utility_2050_2054),
+    #             2051: int(args.utility_2050_2054),
+    #             2052: int(args.utility_2050_2054),
+    #             2053: int(args.utility_2050_2054),
+    #             2054: int(args.utility_2050_2054),
+    #             2055: int(args.utility_2055_2059),
+    #             2056: int(args.utility_2055_2059),
+    #             2057: int(args.utility_2055_2059),
+    #             2058: int(args.utility_2055_2059),
+    #             2059: int(args.utility_2055_2059),
+    #             2060: int(args.utility_2060_2064),
+    #             2061: int(args.utility_2060_2064),
+    #             2062: int(args.utility_2060_2064),
+    #             2063: int(args.utility_2060_2064),
+    #             2064: int(args.utility_2060_2064),
+    #             2065: int(args.utility_2065_2069),
+    #             2066: int(args.utility_2065_2069),
+    #             2067: int(args.utility_2065_2069),
+    #             2068: int(args.utility_2065_2069),
+    #             2069: int(args.utility_2065_2069),
+    #             2070: int(args.utility_2070_2074),
+    #             2071: int(args.utility_2070_2074),
+    #             2072: int(args.utility_2070_2074),
+    #             2073: int(args.utility_2070_2074),
+    #             2074: int(args.utility_2070_2074)
+    #             }
 
     hmrc = TaxMan()
     
@@ -133,7 +187,7 @@ def simulate_a_life(args):
             _ = filipe.get_from_cash(filipe.living_costs[year])
             extra_cash_needed_to_pay_living_costs = 0 
         else:
-            taken = filipe.get_from_cash(filipe.cash - 1)
+            taken = filipe.get_from_cash(filipe.cash - 1) #leave myself $1
             extra_cash_needed_to_pay_living_costs = living_costs - taken
         
 
@@ -149,46 +203,31 @@ def simulate_a_life(args):
 
 
         utility_desired = max(args.utility_base, min(args.utility_cap, income_after_tax*utility_income_multiplier + \
-                                                get_last_element_or_zero(pension_list)*utility_pension_multiplier + \
-                                                (my_ISA.asset_value + my_gia.asset_value)*utility_investments_multiplier + \
-                                                 args.utility_total_assets_years_left_multiplier*(args.final_year - year)*get_last_element_or_zero(TOTAL_ASSETS_list)))
+                                                     get_last_element_or_zero(pension_list)*utility_pension_multiplier + \
+                                                    (my_ISA.asset_value + my_gia.asset_value)*utility_investments_multiplier + \
+                                                     args.utility_total_assets_years_left_multiplier*(args.final_year - year)*get_last_element_or_zero(TOTAL_ASSETS_list)))
+
+        # utility_desired = max(args.utility_base, min(args.utility_cap,
+        #                                             utility_dict[year]))
         
         #don't buy more utility than I have in assets and never more than utility_cap
         # I can't buy more utility than I have in ISA AND GIA combined and I don't want to buy more than 100k
 
 
         # CAPITAL GAINS (and accessing GIA if I need it for other reasons)
-        extra_cash_needed_all = max(args.buffer_multiplier*filipe.living_costs[year] + \
-                                            utility_desired + \
-                                            extra_cash_needed_to_pay_living_costs + \
-                                            get_last_element_or_zero(capital_gains_tax_list) - \
-                                            filipe.cash, 
-                                            0)
+        extra_cash_needed_all = max(0,
+            args.buffer_multiplier*filipe.living_costs[year] + \
+            utility_desired + \
+            extra_cash_needed_to_pay_living_costs + \
+            get_last_element_or_zero(capital_gains_tax_list)
+            )
 
         to_take_from_gia = min(my_gia.asset_value, extra_cash_needed_all)
 
-               
-        if to_take_from_gia <= 0:
-            if args.CG_strategy == "harvest" and my_gia.asset_value > 1:
-                taken_from_gia, capital_gains = my_gia.get_money(my_gia.asset_value-1)
-                my_gia.put_money(taken_from_gia)
-                capital_gains_tax = hmrc.capital_gains_tax_due(capital_gains)
-
-            elif args.CG_strategy == "let_grow":
-                capital_gains = 0
-                capital_gains_tax = 0
-        
-        elif to_take_from_gia > 1:
-            if args.CG_strategy == "harvest" and my_gia.asset_value > 1:
-                taken_from_gia, capital_gains = my_gia.get_money(my_gia.asset_value-1)
-                my_gia.put_money(taken_from_gia - to_take_from_gia)
-                capital_gains_tax = hmrc.capital_gains_tax_due(capital_gains)
-
-            elif args.CG_strategy == "let_grow":
-                extra_cash, capital_gains = my_gia.get_money(extra_cash_needed_from_gia)
-                filipe.put_in_cash(extra_cash)
-                capital_gains_tax = hmrc.capital_gains_tax_due(capital_gains)
-
+        #HARVEST (and leave some out if needed)
+        taken_from_gia, capital_gains = my_gia.get_money(my_gia.asset_value)
+        my_gia.put_money(taken_from_gia - to_take_from_gia)
+        capital_gains_tax = hmrc.capital_gains_tax_due(capital_gains)
         filipe.put_in_cash(to_take_from_gia)
 
 
@@ -217,10 +256,11 @@ def simulate_a_life(args):
         # I couldn't find the following money so I need to take it from the utility desired
 
         if unpaid_living_costs > 0:
-            filipe.utility.append(-(unpaid_living_costs)**1.2) # exp penalty for negative utility
+            filipe.utility.append(-(unpaid_living_costs)**2) # exp penalty for negative utility
             utility_i_can_afford = - unpaid_living_costs
         else:
-            utility_i_can_afford = max(0, utility_desired - extra_cash_needed_after_gia_and_isa - extra_cash_needed_to_pay_living_costs)
+            #utility_i_can_afford = max(0, utility_desired - extra_cash_needed_after_gia_and_isa - extra_cash_needed_to_pay_living_costs)
+            utility_i_can_afford = min(filipe.cash, utility_desired)
             filipe.buy_utility(utility_i_can_afford)
 
 
@@ -273,6 +313,7 @@ def simulate_a_life(args):
 
 
     total_ut = round(sum(filipe.utility))
+    std_ut = 0#abs(round(np.std(filipe.utility)))**2
     import numpy_financial as npf
     discounted_utility = npf.npv(args.utility_discount_rate, filipe.utility).round(0)
 
@@ -316,4 +357,4 @@ def simulate_a_life(args):
     print('TOTAL UTILITY ,' , total_ut)
     print('Discounted UTILITY ,' , discounted_utility)
 
-    return discounted_utility, df
+    return discounted_utility-std_ut, df

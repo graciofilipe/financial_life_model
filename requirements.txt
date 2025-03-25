@@ -3,3 +3,4 @@ plotly
 google-cloud-storage
 numpy
 numpy-financial
+google-cloud-aiplatform

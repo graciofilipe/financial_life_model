@@ -61,7 +61,7 @@ class PensionAccount:
 
 
 class GeneralInvestmentAccount:
-    def __init__(self, initial_value=0, initial_units=100, growth_rate=0.03):
+    def __init__(self, initial_value=0, initial_units=100.0, growth_rate=0.03):
         self.asset_value = initial_value
         self.growth_rate = growth_rate
         self.units=initial_units
@@ -69,10 +69,13 @@ class GeneralInvestmentAccount:
         self.current_unit_price = self.average_unit_buy_price
 
     def put_money(self, amount):
-        units_to_add = amount/self.current_unit_price
-        self.average_unit_buy_price = (self.units*self.average_unit_buy_price + units_to_add*self.current_unit_price) / (self.units + units_to_add)
-        self.asset_value += amount
-        self.units += units_to_add
+        if amount == 0:
+            pass
+        else:
+            units_to_add = amount/self.current_unit_price
+            self.average_unit_buy_price = (self.units*self.average_unit_buy_price + units_to_add*self.current_unit_price) / (self.units + units_to_add)
+            self.asset_value += amount
+            self.units += units_to_add
 
     def get_money(self, amount):
         if amount <= self.asset_value:
