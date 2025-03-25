@@ -59,7 +59,6 @@ class PensionAccount:
         self.asset_value *= (1+self.growth_rate)
 
 
-
 class GeneralInvestmentAccount:
     def __init__(self, initial_value=0, initial_units=100.0, growth_rate=0.03):
         self.asset_value = initial_value
