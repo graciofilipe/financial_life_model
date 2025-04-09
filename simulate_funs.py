@@ -211,19 +211,23 @@ def simulate_a_life(args):
         # get_last_element_or_zero(capital_gains_tax_list)
         extra_cash_needed_all += args.buffer_multiplier*filipe.living_costs[year]
 
-        # capital gains tax buffer = 1.2 (I can expect 20% of what I take from GIA to wash away to pay CGT) 
-        needed_from_gia = min(my_gia.asset_value, extra_cash_needed_all*1.2)
+        # 1.2 multiplier is estimate to pay for CGT
+        to_extract_from_gia = min(my_gia.asset_value, extra_cash_needed_all*1.2)
 
         #HARVEST (and leave some out if needed)
         harvest_from_gia, capital_gains = my_gia.get_money(my_gia.asset_value)
         capital_gains_tax = hmrc.capital_gains_tax_due(capital_gains)
-        harvest_after_tax = harvest_from_gia - capital_gains_tax
-        cash_available_from_gia = min(harvest_after_tax, needed_from_gia)
-        my_gia.put_money(harvest_after_tax - cash_available_from_gia)
-        filipe.put_in_cash(cash_available_from_gia)
+        
+        # put back money after taking away needed for tax and payments
+        harvest_after_tax_and_extraction = harvest_from_gia - to_extract_from_gia
+        my_gia.put_money(harvest_after_tax_and_extraction)
+
+        # pay tax and put the rest in cash        
+        gia_extract_after_tax = to_extract_from_gia - capital_gains_tax
+        filipe.put_in_cash(gia_extract_after_tax)
 
 
-        extra_cash_needed_after_gia = max(0, extra_cash_needed_all - cash_available_from_gia)
+        extra_cash_needed_after_gia = max(0, extra_cash_needed_all - gia_extract_after_tax)
         if extra_cash_needed_after_gia > 0:
             to_take_from_ISA = min(my_ISA.asset_value, extra_cash_needed_after_gia)
             taken_from_isa = my_ISA.get_money(amount=to_take_from_ISA)
@@ -232,7 +236,6 @@ def simulate_a_life(args):
         else:
             extra_cash_needed_after_gia_and_isa = 0
             to_take_from_ISA = 0
-
 
 
         # PAY THE REMAINING LIVING COSTS
@@ -272,7 +275,7 @@ def simulate_a_life(args):
 
         # LOG VALUES
         cash_list.append(filipe.cash)
-        taken_from_gia_list.append(cash_available_from_gia)
+        taken_from_gia_list.append(to_extract_from_gia)
         pension_list.append(my_pension.asset_value)
         ISA_list.append(my_ISA.asset_value)
         GIA_list.append(my_gia.asset_value)
@@ -297,7 +300,7 @@ def simulate_a_life(args):
         extra_cash_needed_to_pay_living_costs_list.append(extra_cash_needed_to_pay_living_costs)
         extra_cash_needed_all_list.append(extra_cash_needed_all)
         TOTAL_ASSETS_list.append(total_assets)
-        to_take_from_gia_list.append(needed_from_gia)
+        to_take_from_gia_list.append(to_extract_from_gia)
         extra_cash_needed_after_gia_list.append(extra_cash_needed_after_gia)
         to_take_from_ISA_list.append(to_take_from_ISA)
         extra_cash_needed_after_gia_and_isa_list.append(extra_cash_needed_after_gia_and_isa)
