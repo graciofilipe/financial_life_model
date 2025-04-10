@@ -5,10 +5,12 @@ import datetime
 import json
 import os
 from datetime import datetime
+import math # For isnan check
 
 # Third-party imports
 import plotly.express as px
 from google.cloud import aiplatform, storage
+import numpy_financial as npf # Ensure numpy_financial is imported if used directly here (it's used in simulate_funs)
 
 
 def main():
@@ -30,7 +32,11 @@ def main():
     parser.add_argument("--NSI_capital", type=float, default=10000, help="Initial capital in NSI account.")
     parser.add_argument("--pension_capital", type=float, default=50000, help="Initial pension capital.")
     parser.add_argument("--ISA_capital", type=float, default=50000, help="Initial ISA capital.")
-    parser.add_argument("--GIA_capital", type=float, default=50000, help="Initial GIA capital.")
+
+    # --- GIA Initial State Arguments ---
+    parser.add_argument("--GIA_capital", type=float, default=50000, help="Initial total value of GIA capital.")
+    parser.add_argument("--GIA_initial_units", type=float, default=100.0, help="Initial number of units held in GIA.")
+    parser.add_argument("--GIA_initial_average_buy_price", type=float, default=None, help="Optional: Initial average buy price per unit for GIA. If None, calculated from GIA_capital / GIA_initial_units.")
 
     # --- Rate/Growth Arguments ---
     parser.add_argument("--fixed_interest_rate", type=float, default=0.02, help="Annual interest rate for fixed interest account.")
@@ -39,50 +45,86 @@ def main():
     parser.add_argument("--ISA_growth_rate", type=float, default=0.02, help="Annual growth rate for ISA investments.")
     parser.add_argument("--GIA_growth_rate", type=float, default=0.02, help="Annual growth rate for GIA investments.")
 
+    # --- Employment Arguments ---
+    parser.add_argument("--employee_pension_contributions_pct", type=float, default=0.07, help="Employee pension contribution as a percentage of gross salary (e.g., 0.07 for 7%).")
+    parser.add_argument("--employer_pension_contributions_pct", type=float, default=0.07, help="Employer pension contribution as a percentage of gross salary (e.g., 0.07 for 7%).")
+
     # --- Strategy Arguments ---
-    parser.add_argument("--CG_strategy", default="harvest", help="Capital gains strategy (currently 'harvest').") # Consider making this more flexible if needed
-    parser.add_argument("--buffer_multiplier", type=float, default=1.2, help="Multiplier for cash buffer based on living costs.")
+    parser.add_argument("--CG_strategy", default="harvest", help="Capital gains strategy (currently 'harvest' - not actively used in logic).")
+    parser.add_argument("--buffer_multiplier", type=float, default=1.2, help="Multiplier for cash buffer based on current year's living costs.")
 
     # --- Utility Function Arguments ---
-    parser.add_argument("--non_linear_utility", type=float, default=1, help="Exponent for non-linear utility calculation.")
-    parser.add_argument("--utility_discount_rate", type=float, default=0.02, help="Discount rate for calculating net present value of utility. Used only for optimisation")
+    # Removed old block arguments
+    parser.add_argument("--utility_baseline", type=float, default=30000, help="Baseline desired utility spending in the start year.")
+    parser.add_argument("--utility_linear_rate", type=float, default=0, help="Absolute amount (£) to add to baseline utility each year.")
+    parser.add_argument("--utility_exp_rate", type=float, default=0.0, help="Exponential growth rate for utility per year (e.g., 0.01 for 1%).")
 
-    # --- Utility Parameters (Default values) ---
-    parser.add_argument("--utility_2024_2029", type=float, default=30000)
-    parser.add_argument("--utility_2030_2034", type=float, default=30000)
-    parser.add_argument("--utility_2035_2039", type=float, default=30000)
-    parser.add_argument("--utility_2040_2044", type=float, default=30000)
-    parser.add_argument("--utility_2045_2049", type=float, default=30000)
-    parser.add_argument("--utility_2050_2054", type=float, default=30000)
-    parser.add_argument("--utility_2055_2059", type=float, default=30000)
-    parser.add_argument("--utility_2060_2064", type=float, default=30000)
-    parser.add_argument("--utility_2065_2069", type=float, default=30000)
-    parser.add_argument("--utility_2070_2074", type=float, default=30000)
+    parser.add_argument("--non_linear_utility", type=float, default=1, help="Exponent for calculating actual utility from spending (e.g., 0.5 for sqrt).")
+    parser.add_argument("--utility_discount_rate", type=float, default=0.02, help="Discount rate for calculating net present value of utility.")
+    parser.add_argument("--volatility_penalty", type=float, default=100000, help="Penalty factor for utility volatility (stdev/mean) in the final metric.")
+
 
     args = parser.parse_args()
 
-    # Run the simulation
+    # --- Calculate default GIA initial average buy price if needed ---
+    if args.GIA_initial_average_buy_price is None:
+        if args.GIA_initial_units > 0 and args.GIA_capital >= 0:
+            args.GIA_initial_average_buy_price = args.GIA_capital / args.GIA_initial_units
+            print(f"Calculated default GIA initial average buy price: {args.GIA_initial_average_buy_price:.4f}")
+        elif args.GIA_initial_units == 0 and args.GIA_capital == 0:
+             args.GIA_initial_average_buy_price = 0.0 # Empty account
+             print("GIA starts empty, initial average buy price set to 0.")
+        else:
+             print(f"Warning: Inconsistent GIA initial state (Capital={args.GIA_capital}, Units={args.GIA_initial_units}) and no average buy price provided. Setting price to 0.")
+             args.GIA_initial_average_buy_price = 0.0
+
+    if math.isnan(args.GIA_initial_average_buy_price):
+        print("Warning: Calculated GIA initial average buy price is NaN. Setting to 0.")
+        args.GIA_initial_average_buy_price = 0.0
+
+
+    # --- Run the simulation ---
     metric, df = simulate_a_life(args)
-    print(f"Simulation completed. Metric: {metric}")
-    print(f"Dataframe: {df}")
+    print(f"Simulation completed. Final Metric: {metric:.2f}")
 
-    # Plot results
-    fig = px.line(df, x=df.index, y=df.columns,
-                    title=f'Financial Simulation')
-    fig.update_xaxes(title_text='Year')
-    fig.update_yaxes(title_text='Value')
+    # --- Plot results ---
+    plot_columns = ['Cash', 'Pension', 'ISA', 'GIA', 'Total Assets', 'Utility Value', 'Living Costs', 'Total Tax']
+    try:
+        fig = px.line(df, x=df.index, y=[col for col in plot_columns if col in df.columns],
+                        title=f'Financial Simulation Results ({args.file_name})')
+        fig.update_xaxes(title_text='Year')
+        fig.update_yaxes(title_text='Value (£)')
+        fig.update_layout(hovermode="x unified")
+    except Exception as e:
+        print(f"Error creating plot: {e}")
+        fig = None
 
-    # Save plot to GCS
-    file_name = f'{args.file_name}_optimal_{datetime.now().strftime("%Y%m%d_%H%M%S")}.html'
-    temp_file_path = f"/tmp/{file_name}"
-    fig.write_html(temp_file_path)
-
+    # --- Save results to GCS ---
+    # (Saving logic remains the same)
     storage_client = storage.Client()
     bucket = storage_client.bucket(args.bucket_name)
-    blob = bucket.blob(file_name)
-    blob.upload_from_filename(temp_file_path)
-    os.remove(temp_file_path) # Clean up temp file
-    print(f"plot uploaded to gs://{args.bucket_name}/{file_name}")
+    if fig:
+        try:
+            file_name_html = f'{args.file_name}_plot_{datetime.now().strftime("%Y%m%d_%H%M%S")}.html'
+            temp_file_path_html = f"/tmp/{file_name_html}"
+            fig.write_html(temp_file_path_html)
+            blob_html = bucket.blob(file_name_html)
+            blob_html.upload_from_filename(temp_file_path_html)
+            os.remove(temp_file_path_html)
+            print(f"Plot uploaded to gs://{args.bucket_name}/{file_name_html}")
+        except Exception as e:
+            print(f"Error saving plot to GCS: {e}")
+    try:
+        file_name_csv = f'{args.file_name}_data_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
+        temp_file_path_csv = f"/tmp/{file_name_csv}"
+        df.to_csv(temp_file_path_csv)
+        blob_csv = bucket.blob(file_name_csv)
+        blob_csv.upload_from_filename(temp_file_path_csv)
+        os.remove(temp_file_path_csv)
+        print(f"Data uploaded to gs://{args.bucket_name}/{file_name_csv}")
+    except Exception as e:
+        print(f"Error saving data to GCS: {e}")
+        print("Please ensure the bucket name is correct and you have write permissions.")
 
 
 if __name__ == "__main__":

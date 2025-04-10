@@ -1,20 +1,38 @@
-from human import Employment, Human
+# Import necessary classes and functions
+from human import (Employment, Human, generate_living_costs, generate_salary,
+                   linear_pension_draw_down_function, calculate_desired_utility)
 from uk_gov import TaxMan
 from investments_and_savings import PensionAccount, SotcksAndSharesISA, GeneralInvestmentAccount, FixedInterest
-from setup_world import generate_living_costs, generate_salary, linear_pension_draw_down_function
+from aux_funs import get_last_element_or_zero
+
+# Standard library imports
 import logging
-import pandas as pd
 import argparse
 import os
 from datetime import datetime
-from aux_funs import get_last_element_or_zero
+
+# Third-party imports
+import pandas as pd
 import plotly.express as px
 from google.cloud import storage
 import numpy as np
-
+import numpy_financial as npf
 
 def simulate_a_life(args):
+    """
+    Runs the financial life simulation year by year.
 
+    Args:
+        args (argparse.Namespace): Parsed command-line arguments containing simulation parameters.
+
+    Returns:
+        tuple: (metric, df)
+            metric (float): The calculated optimization metric (discounted utility penalized by volatility).
+            df (pd.DataFrame): DataFrame containing the detailed simulation results per year.
+    """
+
+    # --- Initialization of Lists to Track Simulation Variables ---
+    # (Tracking lists remain the same)
     taxable_salary_list = []
     gross_interest_list = []
     taxable_interest_list = []
@@ -23,6 +41,7 @@ def simulate_a_life(args):
     pension_allowance_list = []
     pension_pay_over_allowance_list = []
     taken_from_pension_list = []
+    taxable_pension_income_list = []
     total_taxable_income_list = []
     income_tax_due_list = []
     national_insurance_due_list = []
@@ -31,334 +50,343 @@ def simulate_a_life(args):
     cash_list = []
     pension_list = []
     ISA_list = []
-    GIA_list = [] 
-    living_costs_list = []
-    taken_from_gia_list = []
+    GIA_list = []
+    fixed_interest_list = []
+    nsi_list = []
     TOTAL_ASSETS_list = []
     invested_in_ISA_list = []
     invested_in_GIA_list = []
+    taken_from_gia_list = []
+    taken_from_isa_list = []
+    living_costs_list = []
     utility_i_can_afford_list = []
     utility_desired_list = []
+    actual_utility_value_list = []
     extra_cash_needed_to_pay_living_costs_list = []
     extra_cash_needed_all_list = []
     unpaid_living_costs_list = []
-    to_take_from_gia_list = []
     extra_cash_needed_after_gia_list = []
-    to_take_from_ISA_list = []
     extra_cash_needed_after_gia_and_isa_list = []
-    
 
 
-    #bucket_name = args.bucket_name
-
-    # create me as a human
+    # --- Setup Simulation Entities ---
     filipe = Human(starting_cash=args.starting_cash,
-                   living_costs=generate_living_costs(), 
+                   living_costs=generate_living_costs(),
                    non_linear_utility=args.non_linear_utility,
                    pension_draw_down_function=linear_pension_draw_down_function)
 
+    my_employment = Employment(gross_salary=generate_salary(),
+                               employee_pension_contributions_pct=args.employee_pension_contributions_pct,
+                               employer_pension_contributions_pct=args.employer_pension_contributions_pct)
 
-    ## set up my world ##
-    my_employment = Employment(gross_salary=generate_salary())
     my_fixed_interest = FixedInterest(initial_value=args.fixed_interest_capital, interest_rate=args.fixed_interest_rate)
     my_NSI = FixedInterest(initial_value=args.NSI_capital, interest_rate=args.NSI_interest_rate)
     my_pension = PensionAccount(initial_value=args.pension_capital, growth_rate=args.pension_growth_rate)
     my_ISA = SotcksAndSharesISA(initial_value=args.ISA_capital, growth_rate=args.ISA_growth_rate)
-    my_gia = GeneralInvestmentAccount(initial_value=args.GIA_capital, growth_rate=args.GIA_growth_rate)
-
-    # the amount of money I wasnt to spend for utility (enjoyment)    
-    utility_dict = {
-                2025: int(args.utility_2024_2029),
-                2026: int(args.utility_2024_2029),
-                2027: int(args.utility_2024_2029),
-                2028: int(args.utility_2024_2029),
-                2029: int(args.utility_2024_2029),
-                2030: int(args.utility_2030_2034),
-                2031: int(args.utility_2030_2034),
-                2032: int(args.utility_2030_2034),
-                2033: int(args.utility_2030_2034),
-                2034: int(args.utility_2030_2034),
-                2035: int(args.utility_2035_2039),
-                2036: int(args.utility_2035_2039),
-                2037: int(args.utility_2035_2039),
-                2038: int(args.utility_2035_2039),
-                2039: int(args.utility_2035_2039),
-                2040: int(args.utility_2040_2044),
-                2041: int(args.utility_2040_2044),
-                2042: int(args.utility_2040_2044),
-                2043: int(args.utility_2040_2044),
-                2044: int(args.utility_2040_2044),
-                2045: int(args.utility_2045_2049),
-                2046: int(args.utility_2045_2049),
-                2047: int(args.utility_2045_2049),
-                2048: int(args.utility_2045_2049),
-                2049: int(args.utility_2045_2049),
-                2050: int(args.utility_2050_2054),
-                2051: int(args.utility_2050_2054),
-                2052: int(args.utility_2050_2054),
-                2053: int(args.utility_2050_2054),
-                2054: int(args.utility_2050_2054),
-                2055: int(args.utility_2055_2059),
-                2056: int(args.utility_2055_2059),
-                2057: int(args.utility_2055_2059),
-                2058: int(args.utility_2055_2059),
-                2059: int(args.utility_2055_2059),
-                2060: int(args.utility_2060_2064),
-                2061: int(args.utility_2060_2064),
-                2062: int(args.utility_2060_2064),
-                2063: int(args.utility_2060_2064),
-                2064: int(args.utility_2060_2064),
-                2065: int(args.utility_2065_2069),
-                2066: int(args.utility_2065_2069),
-                2067: int(args.utility_2065_2069),
-                2068: int(args.utility_2065_2069),
-                2069: int(args.utility_2065_2069),
-                2070: int(args.utility_2070_2074),
-                2071: int(args.utility_2070_2074),
-                2072: int(args.utility_2070_2074),
-                2073: int(args.utility_2070_2074),
-                2074: int(args.utility_2070_2074),
-                }
-
+    my_gia = GeneralInvestmentAccount(initial_value=args.GIA_capital,
+                                      initial_units=args.GIA_initial_units,
+                                      initial_average_buy_price=args.GIA_initial_average_buy_price,
+                                      growth_rate=args.GIA_growth_rate)
     hmrc = TaxMan()
-    
-    # runs each year of the simulation
-    for year in range(args.start_year, args.final_year):
-                
-        
-        # get paid
-        taxable_salary = my_employment.get_salary_before_tax_after_pension_contributions(year)
-        # not putting this in cash, because I actually recieve this after the tax is taken
 
-        # get UK gross interest
-        gross_interest = my_fixed_interest.pay_interest() 
-        
-        nsi_interest = my_NSI.pay_interest()
-        taxable_interest = hmrc.taxable_interest(taxable_income=taxable_salary, gross_interest=gross_interest)
-        
+
+    # --- Simulation Loop ---
+    for year in range(args.start_year, args.final_year + 1):
+
+        # --- Calculate Desired Utility for the current year ---
+        utility_desired = calculate_desired_utility(
+            year=year,
+            start_year=args.start_year,
+            baseline=args.utility_baseline,
+            linear_rate=args.utility_linear_rate,
+            exp_rate=args.utility_exp_rate
+        )
+
+        # --- 1. Income Phase ---
+        # Salary (after employee pension contributions, before tax)
+        taxable_salary = my_employment.get_salary_before_tax_after_pension_contributions(year)
+
+        # Interest Income (Gross)
+        gross_interest = my_fixed_interest.pay_interest()
+        nsi_interest = my_NSI.pay_interest() # NSI interest is tax-free
+
+        # Add gross interest amounts to cash (tax calculated later)
         filipe.put_in_cash(nsi_interest)
         filipe.put_in_cash(gross_interest)
 
-        # get UK dividends # TODO: tax dividends
-        dividends = 200
+        # Dividends (Placeholder)
+        dividends = 0
 
-        # INVESTMENT GROWTH
+        # --- 2. Investment Growth Phase ---
         my_ISA.grow_per_year()
         my_gia.grow_per_year()
         my_pension.grow_per_year()
-    
-    
-        ## income into pension from salary ##
-        total_pension_contributions =  my_employment.get_employee_pension_contributions(year) + \
-                                       my_employment.get_employer_pension_contributions(year)
-        
+
+        # --- 3. Pension Contributions & Drawdown Phase ---
+        # Contributions
+        employee_contrib = my_employment.get_employee_pension_contributions(year)
+        employer_contrib = my_employment.get_employer_pension_contributions(year)
+        total_pension_contributions = employee_contrib + employer_contrib
         my_pension.put_money(total_pension_contributions)
 
-        # pension draw down (need to do this before tax because pension income is taxable)
-        to_take_from_pension_pot = filipe.pension_draw_down_function(pot_value=my_pension.asset_value,
-                                                                            current_year=year,
-                                                                            retirement_year=args.retirement_year,
-                                                                            final_year=args.final_year)
+        # Drawdown
+        to_take_from_pension_pot = filipe.pension_draw_down_function(
+            pot_value=my_pension.asset_value,
+            current_year=year,
+            retirement_year=args.retirement_year,
+            final_year=args.final_year
+        )
         taken_from_pension = my_pension.get_money(to_take_from_pension_pot)
 
-        ## Calculate TAXES ##
-
-        # pension income
+        # --- Determine Taxable Pension Income (Moved earlier for PSA calculation) ---
         if year == args.retirement_year:
+            # Assuming the entire 'taken_from_pension' in retirement year is the tax-free lump sum
             taxable_pension_income = 0
-        else:
+            # Add the tax-free lump sum directly to cash
+            filipe.put_in_cash(taken_from_pension)
+        elif year > args.retirement_year:
             taxable_pension_income = taken_from_pension
-        
-        # calculate pension allowance
-        pension_allowance = hmrc.pension_allowance(taxable_income_post_pension=taxable_salary + taxable_interest,
-                                                   individual_pension_contribution=my_employment.get_employee_pension_contributions(year),
-                                                   employer_contribution=my_employment.get_employer_pension_contributions(year))
-        pension_pay_over_allowance = max(0, total_pension_contributions - pension_allowance)
-
-
-        total_taxable_income = taxable_salary + taxable_interest + pension_pay_over_allowance + taxable_pension_income
-
-        income_tax_due = hmrc.calculate_uk_income_tax(total_taxable_income)
-
-        ni_due = hmrc.calculate_uk_national_insurance(taxable_salary + my_employment.get_employee_pension_contributions(year))
-               
-        income_after_tax = taxable_salary + taken_from_pension - income_tax_due - ni_due
-        
-        # NOW I CAN PUT THIS IN CASH before paying things ##
-        filipe.put_in_cash(income_after_tax)
-
-        #### pay my living costs
-        living_costs = filipe.living_costs[year]
-        if living_costs < filipe.cash:
-            _ = filipe.get_from_cash(filipe.living_costs[year])
-            extra_cash_needed_to_pay_living_costs = 0 
+            # Taxable pension income added to cash later (after tax calculation)
         else:
-            taken = filipe.get_from_cash(filipe.cash - 1) #leave myself $1
-            extra_cash_needed_to_pay_living_costs = living_costs - taken
-        
+            taxable_pension_income = 0 # No pension income before retirement
 
-        # The utility: how much do I want to consume for fun
-        utility_desired = utility_dict[year]
-        
-        
-        # how much money do I need to pay remaining living costs, and to buy utility
-        extra_cash_needed_all = max(0,
-            utility_desired + \
-            extra_cash_needed_to_pay_living_costs
+
+        # --- Calculate Taxable Interest (using improved income estimate) ---
+        # Estimate income for determining Personal Savings Allowance (PSA) tax band.
+        # Includes salary, gross interest (as it contributes to the band), and taxable pension income.
+        # Excludes pension allowance charge for simplicity (as it depends on final income).
+        income_estimate_for_psa = taxable_salary + gross_interest + taxable_pension_income
+        taxable_interest = hmrc.taxable_interest(
+            taxable_income=income_estimate_for_psa, # Use the improved estimate
+            gross_interest=gross_interest
         )
 
-        # let's build some buffers to avoid ending the year with zero
-        # get_last_element_or_zero(capital_gains_tax_list)
-        extra_cash_needed_all += args.buffer_multiplier*filipe.living_costs[year]
+        # --- 4. Tax Calculation Phase ---
+        # Calculate Pension Allowance & Potential Tax Charge
+        # Note: Income definition for allowance check still uses taxable_salary + taxable_interest
+        # This could be refined further but adds complexity.
+        income_for_allowance_check = taxable_salary + taxable_interest # Using taxable interest here
+        pension_allowance = hmrc.pension_allowance(
+            taxable_income_post_pension=income_for_allowance_check,
+            individual_pension_contribution=employee_contrib,
+            employer_contribution=employer_contrib
+        )
+        pension_pay_over_allowance = max(0, total_pension_contributions - pension_allowance)
 
-        # 1.2 multiplier is estimate to pay for CGT
-        to_extract_from_gia = min(my_gia.asset_value, extra_cash_needed_all*1.2)
+        # Calculate Total Taxable Income (using the calculated taxable_interest)
+        total_taxable_income = (taxable_salary
+                                + taxable_interest # Use the calculated taxable amount
+                                + pension_pay_over_allowance
+                                + taxable_pension_income
+                                + dividends)
 
-        #HARVEST (and leave some out if needed)
-        harvest_from_gia, capital_gains = my_gia.get_money(my_gia.asset_value)
-        capital_gains_tax = hmrc.capital_gains_tax_due(capital_gains)
-        
-        # put back money after taking away needed for tax and payments
-        harvest_after_tax_and_extraction = harvest_from_gia - to_extract_from_gia
-        my_gia.put_money(harvest_after_tax_and_extraction)
+        # Calculate Income Tax
+        income_tax_due = hmrc.calculate_uk_income_tax(total_taxable_income)
 
-        # pay tax and put the rest in cash        
-        gia_extract_after_tax = to_extract_from_gia - capital_gains_tax
-        filipe.put_in_cash(gia_extract_after_tax)
+        # Calculate National Insurance
+        gross_salary_for_ni = my_employment.get_gross_salary(year)
+        ni_due = hmrc.calculate_uk_national_insurance(gross_salary_for_ni)
 
+        # Calculate Net Income to Add to Cash
+        income_after_tax = (taxable_salary
+                            + taxable_pension_income # Add taxable pension income here
+                            - income_tax_due
+                            - ni_due)
+        # Add the net income to cash (NSI interest & gross fixed interest already added)
+        # Tax-free lump sum also already added if applicable.
+        filipe.put_in_cash(income_after_tax)
 
-        extra_cash_needed_after_gia = max(0, extra_cash_needed_all - gia_extract_after_tax)
-        if extra_cash_needed_after_gia > 0:
-            to_take_from_ISA = min(my_ISA.asset_value, extra_cash_needed_after_gia)
-            taken_from_isa = my_ISA.get_money(amount=to_take_from_ISA)
-            filipe.put_in_cash(taken_from_isa)
-            extra_cash_needed_after_gia_and_isa = extra_cash_needed_after_gia - taken_from_isa
-        else:
-            extra_cash_needed_after_gia_and_isa = 0
-            to_take_from_ISA = 0
-
-
-        # PAY THE REMAINING LIVING COSTS
-        if filipe.cash >  extra_cash_needed_to_pay_living_costs:
-            _ = filipe.get_from_cash(extra_cash_needed_to_pay_living_costs)
+        # --- 5. Spending Phase (Living Costs & Utility) ---
+        # (Logic remains the same)
+        living_costs = filipe.living_costs.get(year, 0)
+        cash_available = filipe.cash
+        if living_costs <= cash_available:
+            paid_living_costs = filipe.get_from_cash(living_costs)
+            extra_cash_needed_to_pay_living_costs = 0
             unpaid_living_costs = 0
         else:
-            payed_living_costs = filipe.get_from_cash(filipe.cash-1)
-            unpaid_living_costs = extra_cash_needed_to_pay_living_costs - payed_living_costs
-                
-        
-        ## AFTER I PAY TAXES AND LIVING EXPENSES, I INVEST OR BUY UTILITY ##
-        # I couldn't find the following money so I need to take it from the utility desired
+            paid_living_costs = filipe.get_from_cash(max(0, cash_available - 1))
+            extra_cash_needed_to_pay_living_costs = living_costs - paid_living_costs
+            unpaid_living_costs = extra_cash_needed_to_pay_living_costs
 
-        if unpaid_living_costs > 0:
-            filipe.utility.append(-(unpaid_living_costs)**2) # exp penalty for negative utility
-            utility_i_can_afford = - unpaid_living_costs
+        # --- 6. Funding Shortfalls & Buffer Phase (Using Investments) ---
+        # (Logic remains the same)
+        buffer_amount = args.buffer_multiplier * living_costs
+        extra_cash_needed_all = (extra_cash_needed_to_pay_living_costs
+                                 + utility_desired
+                                 + buffer_amount)
+        capital_gains = 0
+        capital_gains_tax = 0
+        gia_extract_net = 0
+        amount_taken_from_gia = 0
+        if extra_cash_needed_all > 0 and my_gia.asset_value > 0:
+            estimated_gia_needed_gross = extra_cash_needed_all * (1 + hmrc.capital_gains_tax_rate)
+            amount_to_attempt_gia = min(my_gia.asset_value, estimated_gia_needed_gross)
+            result = my_gia.get_money(amount_to_attempt_gia)
+            if isinstance(result, tuple):
+                amount_taken_from_gia, capital_gains = result
+                capital_gains_tax = hmrc.capital_gains_tax_due(capital_gains)
+                gia_extract_net = amount_taken_from_gia - capital_gains_tax
+                filipe.put_in_cash(gia_extract_net)
+            else:
+                 amount_taken_from_gia = 0; capital_gains = 0; capital_gains_tax = 0; gia_extract_net = 0
         else:
-            #utility_i_can_afford = max(0, utility_desired - extra_cash_needed_after_gia_and_isa - extra_cash_needed_to_pay_living_costs)
-            utility_i_can_afford = min(filipe.cash, utility_desired)
-            filipe.buy_utility(utility_i_can_afford)
+            amount_taken_from_gia = 0
 
+        extra_cash_needed_after_gia = max(0, extra_cash_needed_all - gia_extract_net)
+        amount_taken_from_isa = 0
+        if extra_cash_needed_after_gia > 0 and my_ISA.asset_value > 0:
+            amount_to_attempt_isa = min(my_ISA.asset_value, extra_cash_needed_after_gia)
+            amount_taken_from_isa = my_ISA.get_money(amount=amount_to_attempt_isa)
+            filipe.put_in_cash(amount_taken_from_isa)
+        else:
+            amount_taken_from_isa = 0
+        extra_cash_needed_after_gia_and_isa = max(0, extra_cash_needed_after_gia - amount_taken_from_isa)
 
-        # INVEST FOR NEXT YEAR #
-        available = max(0, filipe.cash - args.buffer_multiplier*filipe.living_costs[year])
+        # --- 7. Final Spending & Utility Calculation ---
+        # (Logic remains the same)
+        if unpaid_living_costs > 0:
+             can_pay_now = min(unpaid_living_costs, filipe.cash)
+             if can_pay_now > 0:
+                 _ = filipe.get_from_cash(can_pay_now)
+                 unpaid_living_costs -= can_pay_now
+        cash_available_for_utility = max(0, filipe.cash - buffer_amount)
+        utility_i_can_afford = min(cash_available_for_utility, utility_desired)
+        if utility_i_can_afford > 0:
+             filipe.buy_utility(utility_i_can_afford)
+             actual_utility_value = utility_i_can_afford ** filipe.non_linear_utility
+        else:
+             if unpaid_living_costs > 0:
+                 utility_penalty = -(unpaid_living_costs**2)
+                 filipe.utility.append(utility_penalty)
+                 actual_utility_value = utility_penalty
+                 utility_i_can_afford = utility_penalty
+             else:
+                 filipe.utility.append(0)
+                 actual_utility_value = 0
 
-        money_for_ISA = filipe.get_from_cash(min(20000, available))
-        if money_for_ISA > 1:
-            my_ISA.put_money(money_for_ISA)
-            available = max(0, available - money_for_ISA)
-        
-        money_for_gia = filipe.get_from_cash(available)
-        if money_for_gia > 1:
-            my_gia.put_money(money_for_gia)
-        
-        total_assets = my_pension.asset_value + my_ISA.asset_value + my_gia.asset_value + filipe.cash
+        # --- 8. Investment Phase (Surplus Cash) ---
+        # (Logic remains the same)
+        cash_above_buffer = max(0, filipe.cash - buffer_amount)
+        invested_in_ISA_this_year = 0
+        invested_in_GIA_this_year = 0
+        isa_allowance_remaining = 20000
+        if cash_above_buffer > 0 and isa_allowance_remaining > 0:
+            money_for_ISA = min(cash_above_buffer, isa_allowance_remaining)
+            actual_isa_investment = filipe.get_from_cash(money_for_ISA)
+            if actual_isa_investment > 0:
+                 my_ISA.put_money(actual_isa_investment)
+                 invested_in_ISA_this_year = actual_isa_investment
+                 cash_above_buffer -= actual_isa_investment
+        if cash_above_buffer > 0:
+             actual_gia_investment = filipe.get_from_cash(cash_above_buffer)
+             if actual_gia_investment > 0:
+                 my_gia.put_money(actual_gia_investment)
+                 invested_in_GIA_this_year = actual_gia_investment
 
-        # LOG VALUES
+        # --- 9. Logging Phase (End of Year State) ---
+        # (Logic remains the same)
+        total_assets = my_pension.asset_value + my_ISA.asset_value + my_gia.asset_value + filipe.cash + my_fixed_interest.asset_value + my_NSI.asset_value
         cash_list.append(filipe.cash)
-        taken_from_gia_list.append(to_extract_from_gia)
         pension_list.append(my_pension.asset_value)
         ISA_list.append(my_ISA.asset_value)
         GIA_list.append(my_gia.asset_value)
-        all_tax_list.append(ni_due + income_tax_due + capital_gains_tax)
+        fixed_interest_list.append(my_fixed_interest.asset_value)
+        nsi_list.append(my_NSI.asset_value)
+        TOTAL_ASSETS_list.append(total_assets)
+        taxable_salary_list.append(taxable_salary)
+        gross_interest_list.append(gross_interest + nsi_interest) # Log total gross interest
+        taxable_interest_list.append(taxable_interest) # Log taxable amount after PSA
         capital_gains_list.append(capital_gains)
         capital_gains_tax_list.append(capital_gains_tax)
-        taxable_salary_list.append(taxable_salary)
-        gross_interest_list.append(gross_interest)
-        taxable_interest_list.append(taxable_interest)
         pension_allowance_list.append(pension_allowance)
         pension_pay_over_allowance_list.append(pension_pay_over_allowance)
         taken_from_pension_list.append(taken_from_pension)
+        taxable_pension_income_list.append(taxable_pension_income)
         total_taxable_income_list.append(total_taxable_income)
         income_tax_due_list.append(income_tax_due)
         national_insurance_due_list.append(ni_due)
-        income_after_tax_list.append(income_after_tax)
-        living_costs_list.append(filipe.living_costs[year])
-        invested_in_ISA_list.append(money_for_ISA)
-        invested_in_GIA_list.append(money_for_gia)
+        all_tax_list.append(ni_due + income_tax_due + capital_gains_tax)
+        # Recalculate net cash inflow for logging clarity
+        net_cash_inflow = (taxable_salary + taxable_pension_income - income_tax_due - ni_due
+                          + nsi_interest + gross_interest # Add gross interest back (tax is part of income_tax_due)
+                          + (taken_from_pension if year == args.retirement_year else 0)) # Add lump sum
+        income_after_tax_list.append(net_cash_inflow) # Log net cash inflow more accurately
+
+        living_costs_list.append(living_costs)
         utility_i_can_afford_list.append(utility_i_can_afford)
         utility_desired_list.append(utility_desired)
+        actual_utility_value_list.append(actual_utility_value)
+        invested_in_ISA_list.append(invested_in_ISA_this_year)
+        invested_in_GIA_list.append(invested_in_GIA_this_year)
+        taken_from_gia_list.append(amount_taken_from_gia)
+        taken_from_isa_list.append(amount_taken_from_isa)
         extra_cash_needed_to_pay_living_costs_list.append(extra_cash_needed_to_pay_living_costs)
         extra_cash_needed_all_list.append(extra_cash_needed_all)
-        TOTAL_ASSETS_list.append(total_assets)
-        to_take_from_gia_list.append(to_extract_from_gia)
-        extra_cash_needed_after_gia_list.append(extra_cash_needed_after_gia)
-        to_take_from_ISA_list.append(to_take_from_ISA)
-        extra_cash_needed_after_gia_and_isa_list.append(extra_cash_needed_after_gia_and_isa)
         unpaid_living_costs_list.append(unpaid_living_costs)
+        extra_cash_needed_after_gia_list.append(extra_cash_needed_after_gia)
+        extra_cash_needed_after_gia_and_isa_list.append(extra_cash_needed_after_gia_and_isa)
 
 
-    total_ut = round(sum(filipe.utility))
-    var_ut = np.var(filipe.utility)
-    std_ut = np.std(filipe.utility)
-    mean_ut = np.mean(filipe.utility)
-    sigma_ut = abs(std_ut/mean_ut)
-    import numpy_financial as npf
-    discounted_utility = npf.npv(args.utility_discount_rate, filipe.utility).round(0)
+    # --- Post-Simulation Analysis ---
+    # (Logic remains the same)
+    final_utility_values = filipe.utility
+    if not final_utility_values:
+         print("Warning: No utility values recorded during simulation.")
+         total_ut, var_ut, std_ut, mean_ut, sigma_ut, discounted_utility = 0, 0, 0, 0, 0, 0
+         metric = -float('inf')
+    else:
+        total_ut = round(sum(final_utility_values))
+        var_ut = np.var(final_utility_values)
+        std_ut = np.std(final_utility_values)
+        mean_ut = np.mean(final_utility_values)
+        sigma_ut = abs(std_ut / mean_ut) if abs(mean_ut) > 1e-6 else 0
+        discounted_utility = npf.npv(args.utility_discount_rate, final_utility_values).round(0)
+        metric = discounted_utility - args.volatility_penalty * sigma_ut
 
+
+    # --- Create Results DataFrame ---
+    # (DataFrame creation remains the same)
     df = pd.DataFrame({
-        'Taxable Salary': taxable_salary_list,
-        'Gross Interest': gross_interest_list,
-        'Taxable Interest': taxable_interest_list,
-        'Capital Gains': capital_gains_list,
-        'Capital Gains Tax': capital_gains_tax_list,
-        'Pension Allowance': pension_allowance_list,
-        'Pension Pay Over Allowance': pension_pay_over_allowance_list,
-        'Taken from Pension Pot': taken_from_pension_list,
-        'Total Taxable Income': total_taxable_income_list,
-        'Income Tax Due': income_tax_due_list,
-        'National Insurance Due': national_insurance_due_list,
-        'Total Tax': all_tax_list,
-        'Amount taken from GIA': taken_from_gia_list,
-        'Living Costs': living_costs_list,
-        'Income After Tax': income_after_tax_list,
-        'Cash': cash_list,
-        'Pension': pension_list,
-        'ISA': ISA_list,
-        'GIA': GIA_list,
-        'Utility I can afford': utility_i_can_afford_list,
-        'Utility Desired': utility_desired_list,
-        'Utility': filipe.utility,
-        'Total Assets': TOTAL_ASSETS_list,
-        'Money Invested in ISA': invested_in_ISA_list,
-        'Money Invested in GIA': invested_in_GIA_list,
-        'Extra Cash Needed to Pay Living Costs': extra_cash_needed_to_pay_living_costs_list,
-        'Extra Cash Needed All': extra_cash_needed_all_list,
+        # Assets
+        'Cash': cash_list, 'Pension': pension_list, 'ISA': ISA_list, 'GIA': GIA_list,
+        'Fixed Interest': fixed_interest_list, 'NSI': nsi_list, 'Total Assets': TOTAL_ASSETS_list,
+        # Income
+        'Taxable Salary': taxable_salary_list, 'Gross Interest': gross_interest_list,
+        'Taxable Interest': taxable_interest_list, 'Taken from Pension Pot': taken_from_pension_list,
+        'Taxable Pension Income': taxable_pension_income_list, 'Income After Tax': income_after_tax_list,
+        # Taxes & Gains
+        'Capital Gains': capital_gains_list, 'Capital Gains Tax': capital_gains_tax_list,
+        'Pension Allowance': pension_allowance_list, 'Pension Pay Over Allowance': pension_pay_over_allowance_list,
+        'Total Taxable Income': total_taxable_income_list, 'Income Tax Due': income_tax_due_list,
+        'National Insurance Due': national_insurance_due_list, 'Total Tax': all_tax_list,
+        # Spending & Utility
+        'Living Costs': living_costs_list, 'Utility Desired': utility_desired_list,
+        'Utility Affordable': utility_i_can_afford_list, 'Utility Value': actual_utility_value_list,
         'Unpaid Living Costs': unpaid_living_costs_list,
-        'To Take from GIA': to_take_from_gia_list,
-        'Extra Cash Needed After GIA': extra_cash_needed_after_gia_list,
-        'To Take from ISA': to_take_from_ISA_list,
-        'Extra Cash Needed After GIA and ISA': extra_cash_needed_after_gia_and_isa_list,
-        'Unpaid Living Costs': unpaid_living_costs_list,
+        # Investments & Withdrawals
+        'Money Invested in ISA': invested_in_ISA_list, 'Money Invested in GIA': invested_in_GIA_list,
+        'Amount taken from GIA': taken_from_gia_list, 'Amount taken from ISA': taken_from_isa_list,
+        # Cash Flow Analysis (Optional)
+        #'Cash Needed Living Costs': extra_cash_needed_to_pay_living_costs_list,
+        #'Cash Needed All': extra_cash_needed_all_list,
+        #'Cash Needed After GIA': extra_cash_needed_after_gia_list,
+        #'Cash Needed After ISA': extra_cash_needed_after_gia_and_isa_list,
 
-    }, index=range(args.start_year, args.final_year))
+    }, index=range(args.start_year, args.final_year + 1))
 
-    metric = discounted_utility - 100000*sigma_ut
-    
-    print('TOTAL UTILITY ,' , total_ut)
-    print('Discounted UTILITY ,' , discounted_utility)
-    print('sigma,' , sigma_ut)
-    print('metric ', metric)
-    print('\n')
-    
+    # --- Print Summary Metrics ---
+    # (Summary printing remains the same)
+    print(f"--- Simulation Summary ---")
+    print(f"Total Raw Utility: {total_ut}")
+    print(f"Mean Utility: {mean_ut:.2f}")
+    print(f"Utility StDev: {std_ut:.2f}")
+    print(f"Utility Sigma (StDev/Mean): {sigma_ut:.4f}")
+    print(f"Discounted Utility (Rate={args.utility_discount_rate:.2%}): {discounted_utility}")
+    print(f"Volatility Penalty Factor: {args.volatility_penalty}")
+    print(f"Final Metric (Discounted Utility - Penalty*Sigma): {metric:.2f}")
+    print(f"Final Total Assets ({args.final_year}): {TOTAL_ASSETS_list[-1]:,.0f}")
+    print(f"--- End Summary --- \n")
+
 
     return metric, df
