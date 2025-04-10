@@ -35,12 +35,12 @@ def main():
     # --- Initial Capital Arguments ---
     parser.add_argument("--starting_cash", type=float, default=5000, help="Initial cash on hand.")
     parser.add_argument("--fixed_interest_capital", type=float, default=1000, help="Initial capital in fixed interest account.")
-    parser.add_argument("--NSI_capital", type=float, default=10000, help="Initial capital in NSI account.")
-    parser.add_argument("--pension_capital", type=float, default=50000, help="Initial pension capital.")
-    parser.add_argument("--ISA_capital", type=float, default=50000, help="Initial ISA capital.")
+    parser.add_argument("--NSI_capital", type=float, default=50000, help="Initial capital in NSI account.")
+    parser.add_argument("--pension_capital", type=float, default=150000, help="Initial pension capital.")
+    parser.add_argument("--ISA_capital", type=float, default=150000, help="Initial ISA capital.")
 
     # --- GIA Initial State Arguments ---
-    parser.add_argument("--GIA_capital", type=float, default=50000, help="Initial total value of GIA capital.")
+    parser.add_argument("--GIA_capital", type=float, default=500000, help="Initial total value of GIA capital.")
     parser.add_argument("--GIA_initial_units", type=float, default=100.0, help="Initial number of units held in GIA.")
     parser.add_argument("--GIA_initial_average_buy_price", type=float, default=None, help="Optional: Initial average buy price per unit for GIA. If None, calculated from GIA_capital / GIA_initial_units.")
 
@@ -62,9 +62,9 @@ def main():
     # --- Utility Function Arguments ---
     parser.add_argument("--utility_baseline", type=float, default=30000, help="Baseline desired utility spending in the start year.")
     parser.add_argument("--utility_linear_rate", type=float, default=0, help="Absolute amount (£) to add to baseline utility each year.")
-    parser.add_argument("--utility_exp_rate", type=float, default=0.0, help="Exponential growth rate for utility per year (e.g., 0.01 for 1%).")
-    parser.add_argument("--non_linear_utility", type=float, default=1, help="Exponent for calculating actual utility from spending (e.g., 0.5 for sqrt).")
-    parser.add_argument("--utility_discount_rate", type=float, default=0.02, help="Discount rate for calculating net present value of utility.")
+    parser.add_argument("--utility_exp_rate", type=float, default=0.005, help="Exponential growth rate for utility per year (e.g., 0.01 for 1%).")
+    parser.add_argument("--non_linear_utility", type=float, default=0.99, help="Exponent for calculating actual utility from spending (e.g., 0.5 for sqrt).")
+    parser.add_argument("--utility_discount_rate", type=float, default=0.001, help="Discount rate for calculating net present value of utility.")
     parser.add_argument("--volatility_penalty", type=float, default=100000, help="Penalty factor for utility volatility (stdev/mean) in the final metric.")
 
     # --- Troubleshooting Arguments ---

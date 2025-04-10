@@ -80,11 +80,7 @@ def simulate_a_life(args):
     utility_desired_list = []
     actual_utility_value_list = []
     unpaid_living_costs_list = []
-    # Extra lists previously used for debugging cash flow are now covered by structured debug logs
-    # extra_cash_needed_to_pay_living_costs_list = []
-    # extra_cash_needed_all_list = []
-    # extra_cash_needed_after_gia_list = []
-    # extra_cash_needed_after_gia_and_isa_list = []
+
 
     # --- Initialize List for Detailed Debug Data ---
     debug_data = []
@@ -197,7 +193,7 @@ def simulate_a_life(args):
         taken_from_pension = my_pension.get_money(to_take_from_pension_pot)
         log_debug_event(debug_data, year, step, "Pension Drawdown Actual", taken_from_pension)
 
-        # Determine Taxable Pension Income (Moved earlier)
+        # Determine Taxable Pension Income
         if year == args.retirement_year:
             taxable_pension_income = 0
             filipe.put_in_cash(taken_from_pension) # Add lump sum to cash
@@ -209,7 +205,7 @@ def simulate_a_life(args):
         log_debug_event(debug_data, year, step, "Taxable Pension Income", taxable_pension_income)
 
 
-        # --- Calculate Taxable Interest (using improved estimate) ---
+        # --- Calculate Taxable Interest (using estimate) ---
         step = "4a. Taxable Interest Calc"
         income_estimate_for_psa = taxable_salary + gross_interest + taxable_pension_income
         log_debug_event(debug_data, year, step, "Income Estimate for PSA", income_estimate_for_psa, f"Salary={taxable_salary:.0f}, GrossInterest={gross_interest:.0f}, TaxPension={taxable_pension_income:.0f}")
