@@ -56,7 +56,6 @@ def main():
     parser.add_argument("--employer_pension_contributions_pct", type=float, default=0.07, help="Employer pension contribution as a percentage of gross salary (e.g., 0.07 for 7%).")
 
     # --- Strategy Arguments ---
-    parser.add_argument("--CG_strategy", default="harvest", help="Capital gains strategy (currently 'harvest' - not actively used in logic).")
     parser.add_argument("--buffer_multiplier", type=float, default=1.2, help="Multiplier for cash buffer based on current year's living costs.")
 
     # --- Utility Function Arguments ---
