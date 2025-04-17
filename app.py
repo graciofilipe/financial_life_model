@@ -3,6 +3,7 @@ import subprocess
 import json
 import shlex # For safely splitting command strings if needed, though list format is preferred
 import logging
+import sys # Import sys for stdout/stderr redirection
 from flask import Flask, render_template, request, jsonify, send_from_directory
 
 # --- Basic Logging Setup ---
@@ -57,11 +58,9 @@ def run_simulation():
         logging.info(f"Constructed command: {' '.join(cmd)}") # Log the command for debugging
 
         # --- Execute the simulation script asynchronously ---
-        # Use Popen for non-blocking execution. Redirect stdout/stderr to files or PIPE.
-        # Using PIPE allows capturing initial output/errors if needed, but can fill buffers
-        # on long processes. For simplicity, let's just launch it.
-        # Consider redirecting stdout/stderr to log files within the container for better debugging.
-        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        # Redirect stdout/stderr to the main application's streams
+        logging.info("Redirecting simulation process output to main application streams.")
+        process = subprocess.Popen(cmd, stdout=sys.stdout, stderr=sys.stderr, text=True)
 
         # Optional: Check immediately if the process started correctly (e.g., script not found)
         # This is a basic check; runtime errors within the script won't be caught here.
