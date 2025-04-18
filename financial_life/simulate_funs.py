@@ -99,7 +99,7 @@ def simulate_a_life(args):
                        pension_draw_down_function=linear_pension_draw_down_function)
         log_debug_event(debug_data, args.start_year -1, "Init", "Start Cash", args.starting_cash)
 
-         my_employment = Employment(gross_salary=generate_salary(base_salary=args.base_salary,
+        my_employment = Employment(gross_salary=generate_salary(base_salary=args.base_salary,
                                                                  base_year=args.start_year - 1,
                                                                  growth_rate=args.salary_growth_rate,
                                                                 last_work_year=args.retirement_year - 1),
