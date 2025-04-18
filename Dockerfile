@@ -23,7 +23,7 @@ RUN pip install --no-cache-dir -r requirements.txt # Install simulation AND Stre
 # Make Streamlit's default port available
 
 # Optional: Set PYTHONPATH if your simulation code uses relative imports across modules
-# ENV PYTHONPATH=/app
+ENV PYTHONPATH=/app
 
 # Run streamlit_app.py when the container launches
 # Use shell form to allow $PORT substitution
