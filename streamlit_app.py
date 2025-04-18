@@ -2,8 +2,11 @@ import streamlit as st
 import argparse # Using argparse to create a Namespace object
 import logging
 import pandas as pd # Needed for displaying debug data
+import sys
 
 # --- Import Simulation Function ---
+# Add the repository root to the Python path
+sys.path.insert(0, '.')
 # Assuming the script is run from the repo root
 try:
     from financial_life.simulate_main import run_simulation_and_get_results
