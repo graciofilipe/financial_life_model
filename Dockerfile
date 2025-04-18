@@ -21,10 +21,9 @@ RUN pip install --no-cache-dir --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt # Install simulation AND Streamlit dependencies (streamlit is in requirements.txt)
 
 # Make Streamlit's default port available
-EXPOSE 8501
 
 # Optional: Set PYTHONPATH if your simulation code uses relative imports across modules
 # ENV PYTHONPATH=/app
 
 # Run streamlit_app.py when the container launches
-ENTRYPOINT ["streamlit", "run", "streamlit_app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+ENTRYPOINT ["streamlit", "run", "streamlit_app.py", "--server.port=$PORT", "--server.address=0.0.0.0"]
