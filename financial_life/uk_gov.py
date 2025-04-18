@@ -83,21 +83,18 @@ class TaxMan:
         # basic rate
         taxable_at_basic = max(0, min(taxable_income, self.tax_bands[0]))
         basic_tax = taxable_at_basic * self.basic_rate
-        #print('basic tax is ', basic_tax)
         tax_due += basic_tax
         remaining_taxable_income -= taxable_at_basic
 
         # higher rate
         taxable_at_higher = max(0 , min(self.tax_bands[1] - self.tax_bands[0], remaining_taxable_income))
         higher_tax = taxable_at_higher * self.higher_rate
-        #print('higher tax is ', higher_tax)
         tax_due += higher_tax
         remaining_taxable_income -= taxable_at_higher
 
         # additional rate
         taxable_at_additional = max(0, remaining_taxable_income)
         additional_tax = taxable_at_additional * self.additional_rate
-        #print('additional tax is ', additional_tax)
         tax_due += additional_tax
 
         return tax_due
@@ -115,10 +112,10 @@ class TaxMan:
             float: The amount of National Insurance contributions due for the year.
         """
 
-        # Convert annual figures to monthly equivalents
-        lower_threshold = 1048*12
-        upper_threshold = 4189*12
-        lower_rate = 0.08
+        # Annual NI thresholds and rates (approximating 2023/24)
+        lower_threshold = 1048*12 # LEL: Point below which 0 NI is paid
+        upper_threshold = 4189*12 # UEL: Point above which rate drops
+        lower_rate = 0.08 # Rate between PT (approx LEL) and UEL (rate changed in Jan '24, using 8%)
         upper_rate = 0.02
 
         if annual_pay <= lower_threshold:
@@ -128,5 +125,4 @@ class TaxMan:
         else:
             annual_contribution = (upper_threshold - lower_threshold) * lower_rate + (annual_pay - upper_threshold) * upper_rate
 
-        #print('NI due is ', annual_contribution)
         return annual_contribution
