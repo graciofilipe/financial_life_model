@@ -144,6 +144,35 @@
             </div>
 
             <div class="form-group">
+                <h3>Living Costs & Salary</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                     <div class="input-group">
+                        <label for="base_living_cost">Base Living Cost (£, Start Year):</label>
+                        <input type="number" step="any" id="base_living_cost" name="base_living_cost" value="20000" class="mt-1">
+                    </div>
+                     <div class="input-group">
+                        <label for="base_salary">Base Salary (£, Year Before Start):</label>
+                        <input type="number" step="any" id="base_salary" name="base_salary" value="100000" class="mt-1">
+                    </div>
+                     <div class="input-group">
+                        <label for="living_costs_rate_pre_retirement">Living Costs Growth Rate (Pre-Retirement %):</label>
+                        <input type="number" step="any" id="living_costs_rate_pre_retirement" name="living_costs_rate_pre_retirement" value="0.02" class="mt-1">
+                         <p class="text-xs text-gray-500 mt-1">Enter rate as decimal (e.g., 0.02 for 2%)</p>
+                    </div>
+                     <div class="input-group">
+                        <label for="living_costs_rate_post_retirement">Living Costs Growth Rate (Post-Retirement %):</label>
+                        <input type="number" step="any" id="living_costs_rate_post_retirement" name="living_costs_rate_post_retirement" value="0.04" class="mt-1">
+                         <p class="text-xs text-gray-500 mt-1">Enter rate as decimal (e.g., 0.04 for 4%)</p>
+                    </div>
+                     <div class="input-group">
+                        <label for="salary_growth_rate">Salary Growth Rate (%):</label>
+                        <input type="number" step="any" id="salary_growth_rate" name="salary_growth_rate" value="0.01" class="mt-1">
+                         <p class="text-xs text-gray-500 mt-1">Enter rate as decimal (e.g., 0.01 for 1%)</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
                 <h3>Strategy</h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="input-group">
