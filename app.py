@@ -52,8 +52,7 @@ def run_simulation():
                     cmd.append(f"--{key}")
             # Handle other arguments with values
             elif value is not None and value != '': # Add argument if it has a value
-                cmd.append(f"--{key}")
-                cmd.append(str(value)) # Ensure value is a string for the command line
+                cmd.append(f"--{key}={value}") # Combine key and value
 
         logging.info(f"Constructed command: {' '.join(cmd)}") # Log the command for debugging
 
