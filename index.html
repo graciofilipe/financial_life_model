@@ -264,7 +264,7 @@
                        params[key] = null; // Send null or omit entirely
                     } else {
                         params[key] = value;
-                        commandPreview += ` --${key} ${value}`;
+                        commandPreview += ` --${key}=${value}`;
                     }
                 } else {
                      params[key] = null; // Send null for empty optional fields
