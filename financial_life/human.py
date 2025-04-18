@@ -3,28 +3,60 @@ import math # Import math for isnan check
 
 # --- Functions moved from setup_world.py ---
 
-def generate_living_costs():
-    """Generates a dictionary of projected annual living costs."""
-    r1 = 1.02 # rate of increase until retirement
-    r2 = 1.04 # rate of increase after retirement
-    retirement_year = 2055 # Assuming retirement year for cost split - consider making this dynamic?
-    final_sim_year = 2074 # Assuming final year - consider making this dynamic?
+def generate_living_costs(rate_pre_retirement, rate_post_retirement, retirement_year, final_year):
+    """
+    Generates a dictionary of projected annual living costs based on provided rates and years.
 
-    # Costs increase at rate r1 until retirement year
-    d1 = {year: 20000 * (r1)**idx for idx, year in enumerate(range(2025, retirement_year + 1))}
+    Args:
+        rate_pre_retirement (float): Annual rate of living cost increase before retirement (e.g., 0.02 for 2%).
+        rate_post_retirement (float): Annual rate of living cost increase after retirement (e.g., 0.04 for 4%).
+        retirement_year (int): The year retirement occurs. Costs increase at the pre-retirement rate up to and including this year.
+        final_year (int): The final year of the simulation for which costs are calculated.
+
+    Returns:
+        dict: A dictionary where keys are years (int) and values are projected living costs (float).
+    """
+    r1 = 1 + rate_pre_retirement # Convert rate to multiplier
+    r2 = 1 + rate_post_retirement # Convert rate to multiplier
+
+    # Costs increase at rate r1 until retirement year (inclusive)
+    # Assuming a base cost of 20000 in the year 2025 (consider parameterizing this base cost and start year)
+    start_year = 2025
+    base_cost = 20000
+    d1 = {year: base_cost * (r1)**(year - start_year) for year in range(start_year, retirement_year + 1)}
+
     # Costs increase at rate r2 from the year after retirement
-    # Base cost for post-retirement is the cost in the retirement year
-    base_post_retirement_cost = d1[retirement_year]
-    d2 = {year: base_post_retirement_cost * (r2)**idx for idx, year in enumerate(range(retirement_year + 1, final_sim_year + 1), start=1)}
+    if retirement_year in d1: # Check if retirement happened within the calculated range
+        base_post_retirement_cost = d1[retirement_year]
+        d2 = {year: base_post_retirement_cost * (r2)**(year - retirement_year) for year in range(retirement_year + 1, final_year + 1)}
+    else: # Handle cases where retirement year might be before the start year (edge case)
+         # If retirement is before the cost calculation starts, apply post-retirement rate from the start
+         # This assumes costs still start being tracked from start_year
+         # A more robust approach might need a different base cost calculation
+         base_post_retirement_cost = base_cost * (r1)**(retirement_year - start_year) # Hypothetical cost at retirement
+         d2 = {year: base_post_retirement_cost * (r2)**(year - retirement_year) for year in range(start_year, final_year + 1)}
+         d1 = {} # No pre-retirement costs in this scenario within the tracked range
+
     # Combine the two dictionaries
     return {**d1, **d2}
 
-def generate_salary():
-    """Generates a dictionary of projected annual gross salaries."""
-    r = 1.01 # salary growth rate
-    retirement_year = 2054 # Assuming last year of work is 2054
-    # Salary increases at rate r from 2024 up to and including retirement_year
-    return {year: 100000 * (r)**idx for idx, year in enumerate(range(2024, retirement_year + 1))}
+def generate_salary(growth_rate, last_work_year):
+    """
+    Generates a dictionary of projected annual gross salaries based on a growth rate and final work year.
+
+    Args:
+        growth_rate (float): Annual salary growth rate (e.g., 0.01 for 1%).
+        last_work_year (int): The final year the salary is earned.
+
+    Returns:
+        dict: A dictionary where keys are years (int) and values are projected gross salaries (float).
+    """
+    r = 1 + growth_rate # Convert rate to multiplier
+    # Assuming a base salary of 100000 in the year 2024 (consider parameterizing base salary and start year)
+    start_year = 2024
+    base_salary = 100000
+    # Salary increases at rate r from start_year up to and including last_work_year
+    return {year: base_salary * (r)**(year - start_year) for year in range(start_year, last_work_year + 1)}
 
 def linear_pension_draw_down_function(pot_value, current_year, retirement_year, final_year):
     """
