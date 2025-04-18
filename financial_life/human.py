@@ -33,12 +33,12 @@ def generate_living_costs(base_cost, base_year, rate_pre_retirement, rate_post_r
         base_post_retirement_cost = d1[retirement_year]
         d2 = {year: base_post_retirement_cost * (r2)**(year - retirement_year) for year in range(retirement_year + 1, final_year + 1)}
     else: # Handle cases where retirement year might be before the start year (edge case)
-         # If retirement is before the cost calculation starts, apply post-retirement rate from the start
-          # This assumes costs still start being tracked from base_year
-         # A more robust approach might need a different base cost calculation
-          base_post_retirement_cost = base_cost * (r1)**(retirement_year - base_year) # Hypothetical cost at retirement
-          d2 = {year: base_post_retirement_cost * (r2)**(year - retirement_year) for year in range(base_year, final_year + 1)}
-         d1 = {} # No pre-retirement costs in this scenario within the tracked range
+        # If retirement is before the cost calculation starts, apply post-retirement rate from the start
+        # This assumes costs still start being tracked from base_year
+        # A more robust approach might need a different base cost calculation
+        base_post_retirement_cost = base_cost * (r1)**(retirement_year - base_year) # Hypothetical cost at retirement
+        d2 = {year: base_post_retirement_cost * (r2)**(year - retirement_year) for year in range(base_year, final_year + 1)}
+        d1 = {} # No pre-retirement costs in this scenario within the tracked range
 
     # Combine the two dictionaries
     return {**d1, **d2}
