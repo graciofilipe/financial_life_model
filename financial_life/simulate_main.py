@@ -54,6 +54,9 @@ def main():
     parser.add_argument("--living_costs_rate_pre_retirement", type=float, default=0.02, help="Annual living costs growth rate before retirement (e.g., 0.02 for 2%).")
     parser.add_argument("--living_costs_rate_post_retirement", type=float, default=0.04, help="Annual living costs growth rate after retirement (e.g., 0.04 for 4%).")
     parser.add_argument("--salary_growth_rate", type=float, default=0.01, help="Annual gross salary growth rate (e.g., 0.01 for 1%).")
+    # --- Base Value Arguments ---
+    parser.add_argument("--base_living_cost", type=float, default=20000, help="Base living cost amount in the start year.")
+    parser.add_argument("--base_salary", type=float, default=100000, help="Base gross salary amount in the year before the start year.")
 
     # --- Employment Arguments ---
     parser.add_argument("--employee_pension_contributions_pct", type=float, default=0.07, help="Employee pension contribution as a percentage of gross salary (e.g., 0.07 for 7%).")
