@@ -209,10 +209,9 @@ def main():
     if df is not None:
         logging.info("Saving results to GCS bucket: %s", args.bucket_name)
         try:
-            # GCS related imports are needed here
             from google.cloud import storage
             import os
-            from datetime import datetime # Need datetime specifically here
+            from datetime import datetime
 
             storage_client = storage.Client()
             bucket = storage_client.bucket(args.bucket_name)
@@ -239,7 +238,7 @@ def main():
             try:
                 file_name_csv = f'{args.file_name}_data_{timestamp}.csv'
                 temp_file_path_csv = f"/tmp/{file_name_csv}"
-                df.to_csv(temp_file_path_csv) # Use the returned df
+                df.to_csv(temp_file_path_csv)
                 blob_csv = bucket.blob(file_name_csv)
                 blob_csv.upload_from_filename(temp_file_path_csv)
                 os.remove(temp_file_path_csv)
@@ -250,8 +249,7 @@ def main():
             # Save debug DataFrame if requested and available (using 'debug_data' returned)
             if args.save_debug_data and debug_data:
                 try:
-                    # Requires pandas import (already global)
-                    debug_df = pd.DataFrame(debug_data) # Use the returned debug_data
+                    debug_df = pd.DataFrame(debug_data)
                     file_name_debug_csv = f'{args.file_name}_debug_data_{timestamp}.csv'
                     temp_file_path_debug_csv = f"/tmp/{file_name_debug_csv}"
                     debug_df.to_csv(temp_file_path_debug_csv, index=False)

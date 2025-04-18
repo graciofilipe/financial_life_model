@@ -1,7 +1,6 @@
 import logging
 import math # Import math for isnan check
 
-# --- Functions moved from setup_world.py ---
 
 def generate_living_costs(base_cost, base_year, rate_pre_retirement, rate_post_retirement, retirement_year, final_year):
     """
@@ -119,8 +118,6 @@ def calculate_desired_utility(year, start_year, baseline, linear_rate, exp_rate)
     desired_utility = linear_adjusted_baseline * ((1 + exp_rate) ** years_passed)
     return desired_utility
 
-
-# --- Original Classes ---
 
 class Human:
     """Represents the individual being simulated."""
