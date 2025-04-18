@@ -4,17 +4,22 @@ import logging
 import pandas as pd # Needed for displaying debug data
 import sys
 import os # Import the os module
+import sys # Ensure sys is imported if not already
 
 # --- Import Simulation Function ---
-# Add the directory containing this script to the Python path
-script_dir = os.path.dirname(os.path.abspath(__file__))
-if script_dir not in sys.path:
-    sys.path.insert(0, script_dir)
-# Assuming the script is run from the repo root
+# Assuming 'financial_life' directory is in the same directory as this script (repo root)
+project_root = os.path.dirname(os.path.abspath(__file__))
+
+# Add the project root to the Python path
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
+# Now try the import
 try:
     from financial_life.simulate_main import run_simulation_and_get_results
-except ImportError:
-    st.error("Could not import simulation function. Ensure 'financial_life' directory is in the Python path.")
+except ImportError as e:
+    # Keep the existing error handling
+    st.error(f"Could not import simulation function. Ensure 'financial_life' directory exists relative to the script and the project root is in the Python path. Error: {e}")
     st.stop() # Stop execution if import fails
 
 # --- Basic Logging ---
