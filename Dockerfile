@@ -27,5 +27,4 @@ EXPOSE 8501
 # ENV PYTHONPATH=/app
 
 # Run streamlit_app.py when the container launches
-# Use ${PORT:-8501} to allow Cloud Run to set the port, defaulting to 8501
-CMD ["streamlit", "run", "streamlit_app.py", "--server.port", "${PORT:-8501}", "--server.enableCORS", "false"]
+ENTRYPOINT ["streamlit", "run", "streamlit_app.py", "--server.port=8501", "--server.address=0.0.0.0"]
