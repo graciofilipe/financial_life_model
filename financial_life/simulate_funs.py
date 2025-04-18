@@ -1,9 +1,9 @@
 # Import necessary classes and functions
-from human import (Employment, Human, generate_living_costs, generate_salary,
+from .human import (Employment, Human, generate_living_costs, generate_salary,
                    linear_pension_draw_down_function, calculate_desired_utility)
-from uk_gov import TaxMan
-from investments_and_savings import PensionAccount, SotcksAndSharesISA, GeneralInvestmentAccount, FixedInterest
-from aux_funs import get_last_element_or_zero
+from .uk_gov import TaxMan
+from .investments_and_savings import PensionAccount, SotcksAndSharesISA, GeneralInvestmentAccount, FixedInterest
+from .aux_funs import get_last_element_or_zero
 
 # Standard library imports
 import logging
