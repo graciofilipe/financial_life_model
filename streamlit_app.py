@@ -52,13 +52,15 @@ with st.sidebar.form(key='simulation_params'):
     # --- Initial Capital (£) ---
     st.subheader("Initial Capital (£)")
     in_starting_cash = st.number_input("Starting Cash", value=5000.0, format="%.2f", help="Initial cash on hand.")
-    in_fixed_interest_capital = st.number_input("Fixed Interest Capital", value=1000.0, format="%.2f", help="Initial capital in fixed interest account.")
     in_NSI_capital = st.number_input("NSI Capital", value=50000.0, format="%.2f", help="Initial capital in NSI account.")
     in_pension_capital = st.number_input("Pension Capital", value=150000.0, format="%.2f", help="Initial pension capital.")
     in_ISA_capital = st.number_input("ISA Capital", value=150000.0, format="%.2f", help="Initial ISA capital.")
     in_GIA_capital = st.number_input("GIA Capital (Total Value)", value=500000.0, format="%.2f", help="Initial total value of GIA capital.")
-    in_GIA_initial_units = st.number_input("GIA Initial Units", value=100.0, format="%.4f", help="Initial number of units held in GIA.")
-    in_GIA_initial_average_buy_price = st.number_input("GIA Initial Average Buy Price", value=0.0, format="%.4f", help="Optional: Initial average buy price per unit for GIA. If 0 and GIA Capital/Units > 0, it will be recalculated.")
+
+    # --- Base Values (£) ---
+    st.subheader("Base Values (£)")
+    in_base_living_cost = st.number_input("Base Living Cost (Start Year)", value=20000.0, format="%.2f", help="Base living cost amount in the start year.")
+    in_base_salary = st.number_input("Base Salary (Year before Start)", value=100000.0, format="%.2f", help="Base gross salary amount in the year before the start year.")
 
     # --- Annual Rates & Growth (%) ---
     st.subheader("Annual Rates & Growth (%)")
@@ -71,11 +73,6 @@ with st.sidebar.form(key='simulation_params'):
     in_living_costs_rate_pre_retirement = st.number_input("Living Costs Growth Rate (Pre-Retirement)", value=0.02, format="%.4f", step=0.001, help=rate_help_text)
     in_living_costs_rate_post_retirement = st.number_input("Living Costs Growth Rate (Post-Retirement)", value=0.04, format="%.4f", step=0.001, help=rate_help_text)
     in_salary_growth_rate = st.number_input("Salary Growth Rate", value=0.01, format="%.4f", step=0.001, help=rate_help_text)
-
-    # --- Base Values (£) ---
-    st.subheader("Base Values (£)")
-    in_base_living_cost = st.number_input("Base Living Cost (Start Year)", value=20000.0, format="%.2f", help="Base living cost amount in the start year.")
-    in_base_salary = st.number_input("Base Salary (Year before Start)", value=100000.0, format="%.2f", help="Base gross salary amount in the year before the start year.")
 
     # --- Employment & Pension Contributions (%) ---
     st.subheader("Employment & Pension Contributions (%)")
@@ -94,7 +91,6 @@ with st.sidebar.form(key='simulation_params'):
     in_utility_exp_rate = st.number_input("Utility Exponential Rate (%/Year)", value=0.005, format="%.4f", step=0.0001, help=rate_help_text + " for utility growth.")
     in_non_linear_utility = st.number_input("Non-Linear Utility Exponent", value=0.99, format="%.4f", step=0.01, help="Exponent for calculating actual utility from spending (e.g., 0.5 for sqrt).")
     in_utility_discount_rate = st.number_input("Utility Discount Rate (%/Year)", value=0.001, format="%.4f", step=0.0001, help=rate_help_text + " for NPV calculation.")
-    in_volatility_penalty = st.number_input("Utility Volatility Penalty", value=100000.0, format="%.2f", help="Penalty factor for utility volatility (stdev/mean) in the final metric.")
 
     # --- Troubleshooting ---
     st.subheader("Troubleshooting")
@@ -126,13 +122,13 @@ if submitted:
             "final_year": int(in_final_year),
             "retirement_year": int(in_retirement_year),
             "starting_cash": in_starting_cash,
-            "fixed_interest_capital": in_fixed_interest_capital,
+            # "fixed_interest_capital": in_fixed_interest_capital, # Removed
             "NSI_capital": in_NSI_capital,
             "pension_capital": in_pension_capital,
             "ISA_capital": in_ISA_capital,
             "GIA_capital": in_GIA_capital,
-            "GIA_initial_units": in_GIA_initial_units,
-            "GIA_initial_average_buy_price": effective_gia_avg_price,
+            # "GIA_initial_units": in_GIA_initial_units, # Removed
+            # "GIA_initial_average_buy_price": None, # Removed - Set to None explicitly
             "fixed_interest_rate": in_fixed_interest_rate,
             "NSI_interest_rate": in_NSI_interest_rate,
             "pension_growth_rate": in_pension_growth_rate,
@@ -151,7 +147,7 @@ if submitted:
             "utility_exp_rate": in_utility_exp_rate,
             "non_linear_utility": in_non_linear_utility,
             "utility_discount_rate": in_utility_discount_rate,
-            "volatility_penalty": in_volatility_penalty,
+            # "volatility_penalty": in_volatility_penalty, # Removed
             "log_level": in_log_level,
             # Pass the checkbox state to the simulation function's save_debug_data param.
             "save_debug_data": in_show_debug_data
