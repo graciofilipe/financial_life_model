@@ -3,10 +3,13 @@ import argparse # Using argparse to create a Namespace object
 import logging
 import pandas as pd # Needed for displaying debug data
 import sys
+import os # Import the os module
 
 # --- Import Simulation Function ---
-# Add the repository root to the Python path
-sys.path.insert(0, '.')
+# Add the directory containing this script to the Python path
+script_dir = os.path.dirname(os.path.abspath(__file__))
+if script_dir not in sys.path:
+    sys.path.insert(0, script_dir)
 # Assuming the script is run from the repo root
 try:
     from financial_life.simulate_main import run_simulation_and_get_results
