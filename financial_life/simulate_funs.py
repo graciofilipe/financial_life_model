@@ -89,7 +89,9 @@ def simulate_a_life(args):
     # --- Setup Simulation Entities ---
     try:
         filipe = Human(starting_cash=args.starting_cash,
-                       living_costs=generate_living_costs(rate_pre_retirement=args.living_costs_rate_pre_retirement,
+                       living_costs=generate_living_costs(base_cost=args.base_living_cost,
+                                                          base_year=args.start_year,
+                                                          rate_pre_retirement=args.living_costs_rate_pre_retirement,
                                                           rate_post_retirement=args.living_costs_rate_post_retirement,
                                                           retirement_year=args.retirement_year,
                                                           final_year=args.final_year),
@@ -97,7 +99,9 @@ def simulate_a_life(args):
                        pension_draw_down_function=linear_pension_draw_down_function)
         log_debug_event(debug_data, args.start_year -1, "Init", "Start Cash", args.starting_cash)
 
-        my_employment = Employment(gross_salary=generate_salary(growth_rate=args.salary_growth_rate,
+         my_employment = Employment(gross_salary=generate_salary(base_salary=args.base_salary,
+                                                                 base_year=args.start_year - 1,
+                                                                 growth_rate=args.salary_growth_rate,
                                                                 last_work_year=args.retirement_year - 1),
                                    employee_pension_contributions_pct=args.employee_pension_contributions_pct,
                                    employer_pension_contributions_pct=args.employer_pension_contributions_pct)
