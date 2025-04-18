@@ -26,4 +26,5 @@ RUN pip install --no-cache-dir -r requirements.txt # Install simulation AND Stre
 # ENV PYTHONPATH=/app
 
 # Run streamlit_app.py when the container launches
-ENTRYPOINT ["streamlit", "run", "streamlit_app.py", "--server.port=$PORT", "--server.address=0.0.0.0"]
+# Use shell form to allow $PORT substitution
+ENTRYPOINT streamlit run streamlit_app.py --server.port=$PORT --server.address=0.0.0.0
