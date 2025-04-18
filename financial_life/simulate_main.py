@@ -15,7 +15,7 @@ from google.cloud import aiplatform, storage
 import numpy_financial as npf
 
 # Import the simulation function
-from simulate_funs import simulate_a_life
+from .simulate_funs import simulate_a_life
 
 
 # --- Refactored Simulation Logic ---
