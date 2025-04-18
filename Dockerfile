@@ -8,12 +8,7 @@ WORKDIR /app
 # Copy the entire 'financial_life' directory containing your simulation scripts
 # into the container under the working directory.
 COPY financial_life/ ./financial_life/
-
-# --- Copy Application Code ---
-COPY app.py .
-COPY index.html .
-# If you create a 'static' folder later for CSS/JS, uncomment the next line
-# COPY static/ ./static/
+COPY streamlit_app.py .
 
 # --- Install Dependencies ---
 # Copy the full requirements file for the simulation
@@ -22,16 +17,15 @@ COPY financial_life/requirements.txt .
 # Install Python dependencies for Flask AND the simulation
 # Using --no-cache-dir reduces image size
 RUN pip install --no-cache-dir --upgrade pip
-RUN pip install --no-cache-dir Flask==2.3.3 # Ensure Flask is installed
-RUN pip install --no-cache-dir -r requirements.txt # Install simulation dependencies
+# Flask is no longer needed
+RUN pip install --no-cache-dir -r requirements.txt # Install simulation AND Streamlit dependencies (streamlit is in requirements.txt)
 
-# Make port 8080 available (Cloud Run uses the PORT environment variable)
-EXPOSE 8080
+# Make Streamlit's default port available
+EXPOSE 8501
 
-# Define environment variable (Cloud Run will set this)
-ENV PORT=8080
 # Optional: Set PYTHONPATH if your simulation code uses relative imports across modules
 # ENV PYTHONPATH=/app
 
-# Run app.py when the container launches
-CMD ["python", "app.py"]
+# Run streamlit_app.py when the container launches
+# Use ${PORT:-8501} to allow Cloud Run to set the port, defaulting to 8501
+CMD ["streamlit", "run", "streamlit_app.py", "--server.port", "${PORT:-8501}", "--server.enableCORS", "false"]

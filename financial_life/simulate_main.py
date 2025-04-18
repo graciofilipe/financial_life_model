@@ -18,6 +18,105 @@ import numpy_financial as npf
 from simulate_funs import simulate_a_life
 
 
+# --- Refactored Simulation Logic ---
+def run_simulation_and_get_results(params):
+    """
+    Runs the financial simulation and generates results (metric, DataFrame, plots).
+
+    Args:
+        params: An object or dictionary containing simulation parameters
+                (similar to the output of argparse.ArgumentParser.parse_args()).
+
+    Returns:
+        A tuple containing:
+        - metric (float): The final calculated simulation metric.
+        - df (pd.DataFrame): The main simulation results DataFrame.
+        - plots (dict): A dictionary where keys are plot names (str) and
+                        values are Plotly figure objects.
+        - debug_data (list or None): The debug data list, or None if not generated.
+    """
+    logging.info("--- Entering run_simulation_and_get_results ---")
+
+    # --- Calculate default GIA initial average buy price if needed ---
+    # Modify params directly as it's an object (like args)
+    # Requires 'math' import within this scope or globally
+    if not hasattr(params, 'GIA_initial_average_buy_price') or params.GIA_initial_average_buy_price is None:
+        if params.GIA_initial_units > 0 and params.GIA_capital >= 0:
+            params.GIA_initial_average_buy_price = params.GIA_capital / params.GIA_initial_units
+            logging.info(f"Calculated default GIA initial average buy price: {params.GIA_initial_average_buy_price:.4f}")
+        elif params.GIA_initial_units == 0 and params.GIA_capital == 0:
+             params.GIA_initial_average_buy_price = 0.0
+             logging.info("GIA starts empty, initial average buy price set to 0.")
+        else:
+             logging.warning(f"Inconsistent GIA initial state (Capital={params.GIA_capital}, Units={params.GIA_initial_units}) and no average buy price provided. Setting price to 0.")
+             params.GIA_initial_average_buy_price = 0.0
+
+    if hasattr(params, 'GIA_initial_average_buy_price') and params.GIA_initial_average_buy_price is not None and math.isnan(params.GIA_initial_average_buy_price):
+        logging.warning("Calculated GIA initial average buy price is NaN. Setting to 0.")
+        params.GIA_initial_average_buy_price = 0.0
+
+
+    logging.info("Starting financial simulation within run_simulation_and_get_results...")
+    # --- Run the simulation ---
+    metric = None
+    df = None
+    debug_data = None
+    try:
+        # Pass the params object directly to the simulation function
+        metric, df, debug_data = simulate_a_life(params)
+        logging.info(f"Simulation completed within run_simulation_and_get_results. Final Metric: {metric:.2f}")
+    except AssertionError as e:
+         logging.critical(f"Assertion failed during simulation: {e}")
+         print(f"CRITICAL: Simulation halted due to assertion error: {e}")
+         raise # Reraise to signal failure upstream
+    except Exception as e:
+         logging.critical(f"An unexpected error occurred during simulation: {e}", exc_info=True)
+         print(f"CRITICAL: Simulation failed with error: {e}")
+         raise # Reraise to signal failure upstream
+
+    # --- Generate Multiple Plots ---
+    # Requires 'plotly.express as px' and 'plotly.graph_objects as go' imports
+    logging.info("Generating plots within run_simulation_and_get_results...")
+    plots = {} # Dictionary to hold plot figures
+
+    # Define column groups for plots
+    plot_groups = {
+        "Assets": ['Total Assets', 'Pension', 'ISA', 'GIA', 'Cash', 'Fixed Interest', 'NSI'],
+        "Income_Tax_Summary": ['Taxable Salary', 'Total Taxable Income', 'Total Tax', 'Income After Tax'],
+        "Spending_Utility": ['Living Costs', 'Utility Desired', 'Utility Affordable', 'Utility Value', 'Unpaid Living Costs'],
+        "Investment_Flows": ['Money Invested in ISA', 'Money Invested in GIA', 'Amount taken from GIA', 'Amount taken from ISA'],
+        "Tax_Details": ['Taxable Interest', 'Capital Gains Tax', 'Income Tax Due', 'National Insurance Due', 'Pension Pay Over Allowance']
+    }
+
+    # Create a plot for each group
+    if df is not None: # Only try plotting if simulation produced a DataFrame
+        for group_name, columns in plot_groups.items():
+            try:
+                # Filter columns that actually exist in the DataFrame
+                valid_cols = [col for col in columns if col in df.columns]
+                if valid_cols:
+                    # Use plotly express for simplicity
+                    fig = px.line(df, x=df.index, y=valid_cols,
+                                  title=f'{group_name.replace("_", " ")} Over Time ({params.file_name})') # Use params.file_name
+                    fig.update_xaxes(title_text='Year')
+                    fig.update_yaxes(title_text='Value (£)')
+                    fig.update_layout(hovermode="x unified")
+                    plots[group_name] = fig # Store the figure
+                    logging.info(f"Generated plot: {group_name}")
+                else:
+                    logging.warning(f"Skipping plot '{group_name}': No valid columns found in DataFrame.")
+            except Exception as e:
+                logging.error(f"Error creating plot for group '{group_name}': {e}", exc_info=True)
+    else:
+        logging.warning("Skipping plot generation as simulation DataFrame is None.")
+
+
+    logging.info("--- Exiting run_simulation_and_get_results ---")
+    # Return the calculated metric, dataframe, generated plots, and debug data
+    return metric, df, plots, debug_data
+
+
+# --- Main Execution Logic ---
 def main():
     print("--- simulate_main.py execution started ---", flush=True) # Added for immediate execution feedback
     """
@@ -86,121 +185,90 @@ def main():
                         datefmt='%Y-%m-%d %H:%M:%S')
     logging.info("Logging configured with level: %s", args.log_level.upper())
 
-
-    # --- Calculate default GIA initial average buy price if needed ---
-    # (Logic remains the same)
-    if args.GIA_initial_average_buy_price is None:
-        if args.GIA_initial_units > 0 and args.GIA_capital >= 0:
-            args.GIA_initial_average_buy_price = args.GIA_capital / args.GIA_initial_units
-            logging.info(f"Calculated default GIA initial average buy price: {args.GIA_initial_average_buy_price:.4f}")
-        elif args.GIA_initial_units == 0 and args.GIA_capital == 0:
-             args.GIA_initial_average_buy_price = 0.0
-             logging.info("GIA starts empty, initial average buy price set to 0.")
-        else:
-             logging.warning(f"Inconsistent GIA initial state (Capital={args.GIA_capital}, Units={args.GIA_initial_units}) and no average buy price provided. Setting price to 0.")
-             args.GIA_initial_average_buy_price = 0.0
-    if math.isnan(args.GIA_initial_average_buy_price):
-        logging.warning("Calculated GIA initial average buy price is NaN. Setting to 0.")
-        args.GIA_initial_average_buy_price = 0.0
-
-    logging.info("Starting financial simulation...")
-    # --- Run the simulation ---
+    # --- Run Simulation & Get Results ---
+    logging.info("Calling run_simulation_and_get_results...")
+    metric, df, plots, debug_data = None, None, None, None # Initialize results
     try:
-        metric, df, debug_data = simulate_a_life(args)
-        logging.info(f"Simulation completed. Final Metric: {metric:.2f}")
-    except AssertionError as e:
-         logging.critical(f"Assertion failed during simulation: {e}")
-         print(f"CRITICAL: Simulation halted due to assertion error: {e}")
-         return # Stop execution
+        # Pass the parsed args object directly
+        metric, df, plots, debug_data = run_simulation_and_get_results(args)
+        # Basic check if results seem valid (can be expanded)
+        if metric is None or df is None or plots is None:
+             logging.critical("Simulation function did not return expected values. Exiting.")
+             print("CRITICAL: Simulation failed internally. Check logs.")
+             return # Stop execution
+        logging.info(f"Simulation successful. Metric: {metric:.2f}. DataFrame shape: {df.shape}. Plots generated: {len(plots)}")
     except Exception as e:
-         logging.critical(f"An unexpected error occurred during simulation: {e}", exc_info=True)
-         print(f"CRITICAL: Simulation failed with error: {e}")
-         return # Stop execution
-
-
-    # --- Generate Multiple Plots ---
-    logging.info("Generating plots...")
-    plots = {} # Dictionary to hold plot figures
-
-    # Define column groups for plots
-    plot_groups = {
-        "Assets": ['Total Assets', 'Pension', 'ISA', 'GIA', 'Cash', 'Fixed Interest', 'NSI'],
-        "Income_Tax_Summary": ['Taxable Salary', 'Total Taxable Income', 'Total Tax', 'Income After Tax'],
-        "Spending_Utility": ['Living Costs', 'Utility Desired', 'Utility Affordable', 'Utility Value', 'Unpaid Living Costs'],
-        "Investment_Flows": ['Money Invested in ISA', 'Money Invested in GIA', 'Amount taken from GIA', 'Amount taken from ISA'],
-        "Tax_Details": ['Taxable Interest', 'Capital Gains Tax', 'Income Tax Due', 'National Insurance Due', 'Pension Pay Over Allowance']
-    }
-
-    # Create a plot for each group
-    for group_name, columns in plot_groups.items():
-        try:
-            # Filter columns that actually exist in the DataFrame
-            valid_cols = [col for col in columns if col in df.columns]
-            if valid_cols:
-                fig = px.line(df, x=df.index, y=valid_cols,
-                              title=f'{group_name.replace("_", " ")} Over Time ({args.file_name})')
-                fig.update_xaxes(title_text='Year')
-                fig.update_yaxes(title_text='Value (£)')
-                fig.update_layout(hovermode="x unified")
-                plots[group_name] = fig # Store the figure
-                logging.info(f"Generated plot: {group_name}")
-            else:
-                logging.warning(f"Skipping plot '{group_name}': No valid columns found in DataFrame.")
-        except Exception as e:
-            logging.error(f"Error creating plot for group '{group_name}': {e}", exc_info=True)
+        # Catch exceptions raised from run_simulation_and_get_results
+        logging.critical(f"Simulation failed during execution: {e}", exc_info=True)
+        print(f"CRITICAL: Simulation execution failed. Check logs for details.")
+        return # Stop execution
 
 
     # --- Save results to GCS ---
-    logging.info("Saving results to GCS bucket: %s", args.bucket_name)
-    try:
-        storage_client = storage.Client()
-        bucket = storage_client.bucket(args.bucket_name)
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-
-        # Save each generated plot
-        for group_name, fig in plots.items():
-            try:
-                file_name_html = f'{args.file_name}_plot_{group_name}_{timestamp}.html'
-                temp_file_path_html = f"/tmp/{file_name_html}"
-                fig.write_html(temp_file_path_html)
-                blob_html = bucket.blob(file_name_html)
-                blob_html.upload_from_filename(temp_file_path_html)
-                os.remove(temp_file_path_html)
-                logging.info(f"Plot '{group_name}' uploaded to gs://{args.bucket_name}/{file_name_html}")
-            except Exception as e:
-                logging.error(f"Error saving plot '{group_name}' to GCS: {e}", exc_info=True)
-
-        # Save main DataFrame
+    # Only proceed if simulation was successful (df is not None)
+    if df is not None:
+        logging.info("Saving results to GCS bucket: %s", args.bucket_name)
         try:
-            file_name_csv = f'{args.file_name}_data_{timestamp}.csv'
-            temp_file_path_csv = f"/tmp/{file_name_csv}"
-            df.to_csv(temp_file_path_csv)
-            blob_csv = bucket.blob(file_name_csv)
-            blob_csv.upload_from_filename(temp_file_path_csv)
-            os.remove(temp_file_path_csv)
-            logging.info(f"Main data uploaded to gs://{args.bucket_name}/{file_name_csv}")
-        except Exception as e:
-            logging.error(f"Error saving main data to GCS: {e}", exc_info=True)
+            # GCS related imports are needed here
+            from google.cloud import storage
+            import os
+            from datetime import datetime # Need datetime specifically here
 
-        # Save debug DataFrame if requested and available
-        if args.save_debug_data and debug_data:
+            storage_client = storage.Client()
+            bucket = storage_client.bucket(args.bucket_name)
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+            # Save each generated plot (using the 'plots' dict returned from the function)
+            if plots: # Check if plots dictionary is not empty
+                for group_name, fig in plots.items():
+                    try:
+                        file_name_html = f'{args.file_name}_plot_{group_name}_{timestamp}.html'
+                        temp_file_path_html = f"/tmp/{file_name_html}"
+                        fig.write_html(temp_file_path_html)
+                        blob_html = bucket.blob(file_name_html)
+                        blob_html.upload_from_filename(temp_file_path_html)
+                        os.remove(temp_file_path_html)
+                        logging.info(f"Plot '{group_name}' uploaded to gs://{args.bucket_name}/{file_name_html}")
+                    except Exception as e:
+                        logging.error(f"Error saving plot '{group_name}' to GCS: {e}", exc_info=True)
+            else:
+                 logging.warning("No plots were generated or returned to save.")
+
+
+            # Save main DataFrame (using the 'df' returned from the function)
             try:
-                debug_df = pd.DataFrame(debug_data)
-                file_name_debug_csv = f'{args.file_name}_debug_data_{timestamp}.csv'
-                temp_file_path_debug_csv = f"/tmp/{file_name_debug_csv}"
-                debug_df.to_csv(temp_file_path_debug_csv, index=False)
-                blob_debug_csv = bucket.blob(file_name_debug_csv)
-                blob_debug_csv.upload_from_filename(temp_file_path_debug_csv)
-                os.remove(temp_file_path_debug_csv)
-                logging.info(f"Debug data uploaded to gs://{args.bucket_name}/{file_name_debug_csv}")
+                file_name_csv = f'{args.file_name}_data_{timestamp}.csv'
+                temp_file_path_csv = f"/tmp/{file_name_csv}"
+                df.to_csv(temp_file_path_csv) # Use the returned df
+                blob_csv = bucket.blob(file_name_csv)
+                blob_csv.upload_from_filename(temp_file_path_csv)
+                os.remove(temp_file_path_csv)
+                logging.info(f"Main data uploaded to gs://{args.bucket_name}/{file_name_csv}")
             except Exception as e:
-                logging.error(f"Error saving debug data to GCS: {e}", exc_info=True)
-        elif args.save_debug_data:
-             logging.warning("Flag --save_debug_data was set, but no debug data was generated/returned.")
+                logging.error(f"Error saving main data to GCS: {e}", exc_info=True)
 
-    except Exception as e:
-        logging.critical(f"Error interacting with GCS: {e}", exc_info=True)
-        print(f"CRITICAL: Failed to save results to GCS. Ensure bucket name is correct and permissions are set.")
+            # Save debug DataFrame if requested and available (using 'debug_data' returned)
+            if args.save_debug_data and debug_data:
+                try:
+                    # Requires pandas import (already global)
+                    debug_df = pd.DataFrame(debug_data) # Use the returned debug_data
+                    file_name_debug_csv = f'{args.file_name}_debug_data_{timestamp}.csv'
+                    temp_file_path_debug_csv = f"/tmp/{file_name_debug_csv}"
+                    debug_df.to_csv(temp_file_path_debug_csv, index=False)
+                    blob_debug_csv = bucket.blob(file_name_debug_csv)
+                    blob_debug_csv.upload_from_filename(temp_file_path_debug_csv)
+                    os.remove(temp_file_path_debug_csv)
+                    logging.info(f"Debug data uploaded to gs://{args.bucket_name}/{file_name_debug_csv}")
+                except Exception as e:
+                    logging.error(f"Error saving debug data to GCS: {e}", exc_info=True)
+            elif args.save_debug_data:
+                 logging.warning("Flag --save_debug_data was set, but no debug data was generated/returned by the simulation function.")
+
+        except Exception as e:
+            logging.critical(f"Error interacting with GCS: {e}", exc_info=True)
+            print(f"CRITICAL: Failed to save results to GCS. Ensure bucket name is correct and permissions are set.")
+    else:
+        logging.error("Skipping GCS save because simulation failed and DataFrame is None.")
 
     logging.info("Script finished.")
 
