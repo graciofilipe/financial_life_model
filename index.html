@@ -255,7 +255,7 @@
                 // Convert numbers from strings if necessary
                 else if (element.type === 'number' && value !== '') {
                     params[key] = parseFloat(value); // Or parseInt if integer expected
-                    commandPreview += ` --${key} ${value}`;
+                    commandPreview += ` --${key}=${value}`;
                 }
                 // Handle non-empty text/select or required fields
                 else if (value !== '' || element.required) {
