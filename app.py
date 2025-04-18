@@ -15,7 +15,7 @@ app = Flask(__name__, template_folder='.', static_folder='static') # Serve from 
 # --- Simulation Script Path ---
 # Assumes your simulation code is in a 'financial_life' subdirectory
 SIMULATION_SCRIPT = os.path.join('financial_life', 'simulate_main.py')
-PYTHON_EXECUTABLE = 'python' # Or specify a full path if needed, e.g., /usr/local/bin/python
+PYTHON_EXECUTABLE = sys.executable # Use the currently running Python interpreter
 
 # --- Routes ---
 
@@ -56,10 +56,19 @@ def run_simulation():
 
         logging.info(f"Constructed command: {' '.join(cmd)}") # Log the command for debugging
 
-        # --- Execute the simulation script asynchronously ---
-        # Redirect stdout/stderr to the main application's streams
-        logging.info("Redirecting simulation process output to main application streams.")
-        process = subprocess.Popen(cmd, stdout=sys.stdout, stderr=sys.stderr, text=True)
+        # --- Execute the simulation script synchronously and capture output ---
+        logging.info("Starting simulation process and capturing output.")
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+        # Wait for the process to complete and capture the output
+        stdout, stderr = process.communicate()
+
+        # Log the results
+        logging.info(f"Simulation process finished with return code: {process.returncode}")
+        if stdout:
+            logging.info(f"Simulation stdout:\n{stdout}")
+        if stderr:
+            logging.error(f"Simulation stderr:\n{stderr}") # Log stderr as error
 
         # Optional: Check immediately if the process started correctly (e.g., script not found)
         # This is a basic check; runtime errors within the script won't be caught here.
@@ -68,10 +77,21 @@ def run_simulation():
         #     logging.error(f"Simulation script failed to start. Return code: {process.returncode}. Stderr: {stderr}")
         #     return jsonify({"status": "error", "message": f"Simulation failed to start: {stderr[:500]}"}), 500
 
-        logging.info(f"Simulation process started with PID: {process.pid}")
+        #logging.info(f"Simulation process started with PID: {process.pid}") # PID might not be relevant anymore
 
-        # Return success message immediately
-        return jsonify({"status": "success", "message": "Simulation started successfully."}), 200
+        # --- Return response based on simulation result ---
+        if process.returncode == 0:
+            return jsonify({
+                "status": "success",
+                "message": f"Simulation completed successfully (Return Code: {process.returncode}).",
+                "stdout": stdout # Optionally include stdout in response
+            }), 200
+        else:
+            return jsonify({
+                "status": "error",
+                "message": f"Simulation failed (Return Code: {process.returncode}).",
+                "stderr": stderr # Include stderr in error response
+            }), 500 # Use a 500 status for server-side/script errors
 
     except json.JSONDecodeError:
         logging.error("Invalid JSON received.")

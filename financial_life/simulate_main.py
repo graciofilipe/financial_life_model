@@ -19,6 +19,7 @@ from simulate_funs import simulate_a_life
 
 
 def main():
+    print("--- simulate_main.py execution started ---", flush=True) # Added for immediate execution feedback
     """
     Parses command-line arguments, sets up logging, runs the simulation,
     and saves results (main DataFrame, debug DataFrame, multiple plot files).
