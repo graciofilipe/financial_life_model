@@ -83,7 +83,8 @@ def run_simulation_and_get_results(params):
     plot_groups = {
         "Assets": ['Total Assets', 'Pension', 'ISA', 'GIA', 'Cash', 'Fixed Interest', 'NSI'],
         "Income_Tax_Summary": ['Taxable Salary', 'Total Taxable Income', 'Total Tax', 'Income After Tax'],
-        "Spending_Utility": ['Living Costs', 'Utility Desired', 'Utility Affordable', 'Utility Value', 'Unpaid Living Costs'],
+        "Utility": ['Utility Desired', 'Utility Affordable', 'Utility Value'],
+        "Living_Costs": ['Living Costs', 'Unpaid Living Costs'],
         "Investment_Flows": ['Money Invested in ISA', 'Money Invested in GIA', 'Amount taken from GIA', 'Amount taken from ISA'],
         "Tax_Details": ['Taxable Interest', 'Capital Gains Tax', 'Income Tax Due', 'National Insurance Due', 'Pension Pay Over Allowance']
     }
