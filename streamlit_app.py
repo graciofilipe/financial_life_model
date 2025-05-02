@@ -56,7 +56,7 @@ with st.sidebar.form(key='simulation_params'):
     in_pension_capital = st.number_input("Pension Capital", value=150000.0, format="%.2f", help="Initial pension capital.")
     in_ISA_capital = st.number_input("ISA Capital", value=150000.0, format="%.2f", help="Initial ISA capital.")
     in_GIA_capital = st.number_input("GIA Capital (Total Value)", value=500000.0, format="%.2f", help="Initial total value of GIA capital.")
-    in_fixed_interest_capital = st.number_input("Fixed Interest Capital", value=0, format="%.2f", help="Initial total value of fixed interest capital.")
+    in_fixed_interest_capital = st.number_input("Fixed Interest Capital", value=0, format="int", help="Initial total value of fixed interest capital.")
 
 
     # --- Base Values (£) ---
