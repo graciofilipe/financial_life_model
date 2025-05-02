@@ -56,6 +56,8 @@ with st.sidebar.form(key='simulation_params'):
     in_pension_capital = st.number_input("Pension Capital", value=150000.0, format="%.2f", help="Initial pension capital.")
     in_ISA_capital = st.number_input("ISA Capital", value=150000.0, format="%.2f", help="Initial ISA capital.")
     in_GIA_capital = st.number_input("GIA Capital (Total Value)", value=500000.0, format="%.2f", help="Initial total value of GIA capital.")
+    in_fixed_interest_capital = st.number_input("Fixed Interest Capital", value=0, format="%.2f", help="Initial total value of fixed interest capital.")
+
 
     # --- Base Values (£) ---
     st.subheader("Base Values (£)")
@@ -121,7 +123,7 @@ if submitted:
             "final_year": int(in_final_year),
             "retirement_year": int(in_retirement_year),
             "starting_cash": in_starting_cash,
-            # "fixed_interest_capital": in_fixed_interest_capital, # Removed
+            "fixed_interest_capital": in_fixed_interest_capital,
             "NSI_capital": in_NSI_capital,
             "pension_capital": in_pension_capital,
             "ISA_capital": in_ISA_capital,
@@ -146,7 +148,7 @@ if submitted:
             "utility_exp_rate": in_utility_exp_rate,
             "non_linear_utility": in_non_linear_utility,
             "utility_discount_rate": in_utility_discount_rate,
-            # "volatility_penalty": in_volatility_penalty, # Removed
+            "volatility_penalty": 0,
             "log_level": in_log_level,
             # Pass the checkbox state to the simulation function's save_debug_data param.
             "save_debug_data": in_show_debug_data
