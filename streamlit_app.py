@@ -51,12 +51,12 @@ with st.sidebar.form(key='simulation_params'):
 
     # --- Initial Capital (£) ---
     st.subheader("Initial Capital (£)")
-    in_starting_cash = st.number_input("Starting Cash", value=5000.0, format="%.2f", help="Initial cash on hand.")
-    in_NSI_capital = st.number_input("NSI Capital", value=50000.0, format="%.2f", help="Initial capital in NSI account.")
-    in_pension_capital = st.number_input("Pension Capital", value=150000.0, format="%.2f", help="Initial pension capital.")
-    in_ISA_capital = st.number_input("ISA Capital", value=150000.0, format="%.2f", help="Initial ISA capital.")
-    in_GIA_capital = st.number_input("GIA Capital (Total Value)", value=500000.0, format="%.2f", help="Initial total value of GIA capital.")
-    in_fixed_interest_capital = st.number_input("Fixed Interest Capital", value=0, format="int", help="Initial total value of fixed interest capital.")
+    in_starting_cash = st.number_input("Starting Cash", value=5000, help="Initial cash on hand.")
+    in_NSI_capital = st.number_input("NSI Capital", value=50000, help="Initial capital in NSI account.")
+    in_pension_capital = st.number_input("Pension Capital", value=150000, help="Initial pension capital.")
+    in_ISA_capital = st.number_input("ISA Capital", value=150000, help="Initial ISA capital.")
+    in_GIA_capital = st.number_input("GIA Capital (Total Value)", value=500000, help="Initial total value of GIA capital.")
+    in_fixed_interest_capital = st.number_input("Fixed Interest Capital", value=0,  help="Initial total value of fixed interest capital.")
 
 
     # --- Base Values (£) ---
