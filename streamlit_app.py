@@ -113,8 +113,7 @@ if submitted:
         # Stop processing this specific submission
     else:
         # --- Collect Inputs into Dictionary (AFTER validation) ---
-        effective_gia_avg_price = 1#in_GIA_initial_average_buy_price if in_GIA_initial_average_buy_price > 0 else None
-
+        
         params_dict = {
             "bucket_name": in_bucket_name,
             "file_name": in_file_name,
@@ -127,8 +126,8 @@ if submitted:
             "pension_capital": in_pension_capital,
             "ISA_capital": in_ISA_capital,
             "GIA_capital": in_GIA_capital,
-            # "GIA_initial_units": in_GIA_initial_units, # Removed
-            # "GIA_initial_average_buy_price": None, # Removed - Set to None explicitly
+            "GIA_initial_units": 100,  
+            "GIA_initial_average_buy_price": 1, 
             "fixed_interest_rate": in_fixed_interest_rate,
             "NSI_interest_rate": in_NSI_interest_rate,
             "pension_growth_rate": in_pension_growth_rate,
