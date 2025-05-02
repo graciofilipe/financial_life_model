@@ -113,7 +113,7 @@ if submitted:
         # Stop processing this specific submission
     else:
         # --- Collect Inputs into Dictionary (AFTER validation) ---
-        effective_gia_avg_price = in_GIA_initial_average_buy_price if in_GIA_initial_average_buy_price > 0 else None
+        effective_gia_avg_price = 1#in_GIA_initial_average_buy_price if in_GIA_initial_average_buy_price > 0 else None
 
         params_dict = {
             "bucket_name": in_bucket_name,

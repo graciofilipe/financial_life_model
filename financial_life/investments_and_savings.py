@@ -90,7 +90,7 @@ class PensionAccount:
 
 class GeneralInvestmentAccount:
     """Represents a General Investment Account (subject to Capital Gains Tax)."""
-    def __init__(self, initial_value=0, initial_units=0, initial_average_buy_price=0, growth_rate=0.03):
+    def __init__(self, initial_value=0, initial_units=0, initial_average_buy_price=1, growth_rate=0.03):
         """
         Initializes the GIA.
 
