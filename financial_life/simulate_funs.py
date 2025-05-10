@@ -2,7 +2,7 @@
 from .human import (Employment, Human, generate_living_costs, generate_salary,
                    linear_pension_draw_down_function, calculate_desired_utility)
 from .uk_gov import TaxMan
-from .investments_and_savings import PensionAccount, SotcksAndSharesISA, GeneralInvestmentAccount, FixedInterest
+from .investments_and_savings import PensionAccount, StocksAndSharesISA, GeneralInvestmentAccount, FixedInterest
 from .aux_funs import get_last_element_or_zero
 
 # Standard library imports
@@ -112,7 +112,7 @@ def simulate_a_life(args):
         log_debug_event(debug_data, args.start_year -1, "Init", "Start NSI", args.NSI_capital)
         my_pension = PensionAccount(initial_value=args.pension_capital, growth_rate=args.pension_growth_rate)
         log_debug_event(debug_data, args.start_year -1, "Init", "Start Pension", args.pension_capital)
-        my_ISA = SotcksAndSharesISA(initial_value=args.ISA_capital, growth_rate=args.ISA_growth_rate)
+        my_ISA = StocksAndSharesISA(initial_value=args.ISA_capital, growth_rate=args.ISA_growth_rate)
         log_debug_event(debug_data, args.start_year -1, "Init", "Start ISA", args.ISA_capital)
         my_gia = GeneralInvestmentAccount(initial_value=args.GIA_capital,
                                           initial_units=args.GIA_initial_units,

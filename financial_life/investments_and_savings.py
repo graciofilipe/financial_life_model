@@ -23,7 +23,7 @@ class DisposableCash:
             return available_amount
 
 
-class SotcksAndSharesISA:
+class StocksAndSharesISA:
     """Represents a Stocks and Shares ISA account (tax-free growth)."""
     def __init__(self, initial_value=0, growth_rate=0.03):
         """
