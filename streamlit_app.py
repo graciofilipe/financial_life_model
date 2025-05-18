@@ -56,6 +56,8 @@ with st.sidebar.form(key='simulation_params'):
     in_pension_capital = st.number_input("Pension Capital", value=150000, help="Initial pension capital.")
     in_ISA_capital = st.number_input("ISA Capital", value=150000, help="Initial ISA capital.")
     in_GIA_capital = st.number_input("GIA Capital (Total Value)", value=500000, help="Initial total value of GIA capital.")
+    in_GIA_initial_units = st.number_input("GIA Initial Units", value=100.0, format="%.4f", help="Initial number of units in GIA.")
+    in_GIA_initial_average_buy_price = st.number_input("GIA Initial Average Buy Price (Optional)", value=None, format="%.4f", help="Optional: Average buy price per unit. If None, derived from GIA Capital / Units.", placeholder="Optional")
     in_fixed_interest_capital = st.number_input("Fixed Interest Capital", value=0,  help="Initial total value of fixed interest capital.")
 
 
@@ -128,8 +130,8 @@ if submitted:
             "pension_capital": in_pension_capital,
             "ISA_capital": in_ISA_capital,
             "GIA_capital": in_GIA_capital,
-            "GIA_initial_units": 100,  
-            "GIA_initial_average_buy_price": 1, 
+            "GIA_initial_units": in_GIA_initial_units if in_GIA_initial_units is not None else 0.0,
+            "GIA_initial_average_buy_price": in_GIA_initial_average_buy_price if in_GIA_initial_average_buy_price is not None else None,
             "fixed_interest_rate": in_fixed_interest_rate,
             "NSI_interest_rate": in_NSI_interest_rate,
             "pension_growth_rate": in_pension_growth_rate,
@@ -150,8 +152,8 @@ if submitted:
             "utility_discount_rate": in_utility_discount_rate,
             "volatility_penalty": 0,
             "log_level": in_log_level,
-            # Pass the checkbox state to the simulation function's save_debug_data param.
-            "save_debug_data": in_show_debug_data
+            # Save debug data to GCS if a bucket name is provided, independent of UI display.
+            "save_debug_data": True if in_bucket_name else False,
         }
 
         # --- Convert Dictionary to Namespace ---

@@ -2,6 +2,7 @@ import logging
 import math # Import math for isnan check
 
 
+# UNIT TESTING: Test year generation, correct application of rates, base year handling.
 def generate_living_costs(base_cost, base_year, rate_pre_retirement, rate_post_retirement, retirement_year, final_year):
     """
     Generates a dictionary of projected annual living costs based on provided rates and years.
@@ -43,6 +44,7 @@ def generate_living_costs(base_cost, base_year, rate_pre_retirement, rate_post_r
     # Combine the two dictionaries
     return {**d1, **d2}
 
+# UNIT TESTING: Test year generation, correct application of rates, base year handling.
 def generate_salary(base_salary, base_year, growth_rate, last_work_year):
     """
     Generates a dictionary of projected annual gross salaries based on a growth rate and final work year.
@@ -63,6 +65,7 @@ def generate_salary(base_salary, base_year, growth_rate, last_work_year):
     # Salary increases at rate r from start_year up to and including last_work_year
     return {year: base_salary * (r)**(year - start_year) for year in range(start_year, last_work_year + 1)}
 
+# UNIT TESTING: Test pre-retirement, retirement year (lump sum), post-retirement years, final year.
 def linear_pension_draw_down_function(pot_value, current_year, retirement_year, final_year):
     """
     Calculates the amount to draw down from the pension pot based on a linear strategy.
@@ -81,11 +84,10 @@ def linear_pension_draw_down_function(pot_value, current_year, retirement_year, 
     # Linear drawdown after retirement (excluding the retirement year itself)
     else:
         # Calculate remaining pot after potential lump sum taken in retirement year
-        # This requires knowing the pot value *at the start* of the retirement year
-        # The current function design doesn't easily allow this lookback.
-        # Simplification: Assume the pot_value passed already excludes the lump sum if current_year > retirement_year.
-        # This might lead to inaccurate drawdown if called mid-year after growth.
-        # A better design might pass the simulation state or specific pot values.
+        # The pot_value passed to this function is the current, post-growth value for the year.
+        # The simulation loop ensures that any lump sum taken in the retirement_year would have already
+        # reduced the pot before this function is called in subsequent years with the then-current pot value.
+        # The linear drawdown is therefore calculated on the actual remaining pot after any prior lump sum withdrawal and subsequent growth.
 
         # Calculate years left for drawdown (inclusive of current year, exclusive of final year?)
         # If final_year is 2074, and current is 2074, years_left should be 1.
@@ -94,6 +96,7 @@ def linear_pension_draw_down_function(pot_value, current_year, retirement_year, 
 
 # --- New Function for Desired Utility ---
 
+# UNIT TESTING: Test with different years and rate combinations.
 def calculate_desired_utility(year, start_year, baseline, linear_rate, exp_rate):
     """
     Calculates the desired utility spending for a given year based on parameters.
@@ -119,6 +122,7 @@ def calculate_desired_utility(year, start_year, baseline, linear_rate, exp_rate)
     return desired_utility
 
 
+# UNIT TESTING: Test buy_utility (calculation, cash deduction), get_from_cash (overdraft penalty).
 class Human:
     """Represents the individual being simulated."""
     def __init__(self, starting_cash, living_costs, pension_draw_down_function, non_linear_utility):
@@ -187,6 +191,7 @@ class Human:
             return amount_to_get
 
 
+# UNIT TESTING: Test methods for calculating contributions and net salary.
 class Employment:
     """Represents the employment status and income."""
     def __init__(self, gross_salary, employee_pension_contributions_pct=0.07, employer_pension_contributions_pct=0.07):

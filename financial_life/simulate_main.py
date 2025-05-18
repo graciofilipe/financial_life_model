@@ -37,24 +37,9 @@ def run_simulation_and_get_results(params):
     """
     logging.info("--- Entering run_simulation_and_get_results ---")
 
-    # --- Calculate default GIA initial average buy price if needed ---
-    # Modify params directly as it's an object (like args)
-    # Requires 'math' import within this scope or globally
-    if not hasattr(params, 'GIA_initial_average_buy_price') or params.GIA_initial_average_buy_price is None:
-        if params.GIA_initial_units > 0 and params.GIA_capital >= 0:
-            params.GIA_initial_average_buy_price = params.GIA_capital / params.GIA_initial_units
-            logging.info(f"Calculated default GIA initial average buy price: {params.GIA_initial_average_buy_price:.4f}")
-        elif params.GIA_initial_units == 0 and params.GIA_capital == 0:
-             params.GIA_initial_average_buy_price = 0.0
-             logging.info("GIA starts empty, initial average buy price set to 0.")
-        else:
-             logging.warning(f"Inconsistent GIA initial state (Capital={params.GIA_capital}, Units={params.GIA_initial_units}) and no average buy price provided. Setting price to 0.")
-             params.GIA_initial_average_buy_price = 0.0
-
-    if hasattr(params, 'GIA_initial_average_buy_price') and params.GIA_initial_average_buy_price is not None and math.isnan(params.GIA_initial_average_buy_price):
-        logging.warning("Calculated GIA initial average buy price is NaN. Setting to 0.")
-        params.GIA_initial_average_buy_price = 0.0
-
+    # GIA_initial_average_buy_price is now handled within the GeneralInvestmentAccount class constructor.
+    # The value from params.GIA_initial_average_buy_price (which could be None if not set by user)
+    # will be passed directly to the constructor.
 
     logging.info("Starting financial simulation within run_simulation_and_get_results...")
     # --- Run the simulation ---
