@@ -286,7 +286,8 @@ def simulate_a_life(args):
 
         capital_gains = 0; capital_gains_tax = 0; gia_extract_net = 0; amount_taken_from_gia = 0
         if extra_cash_needed_all > 0 and my_gia.asset_value > 0:
-            estimated_gia_needed_gross = extra_cash_needed_all * (1 + hmrc.capital_gains_tax_rate) # Simple estimate
+            # Simple estimate for GIA gross withdrawal, may result in slightly more CGT or a small second withdrawal.
+            estimated_gia_needed_gross = extra_cash_needed_all * (1 + hmrc.capital_gains_tax_rate)
             log_debug_event(debug_data, year, step, "GIA Withdrawal Estimate (Gross)", estimated_gia_needed_gross)
             amount_to_attempt_gia = min(my_gia.asset_value, estimated_gia_needed_gross)
             log_debug_event(debug_data, year, step, "GIA Withdrawal Attempt", amount_to_attempt_gia)
@@ -375,7 +376,7 @@ def simulate_a_life(args):
 
         invested_in_ISA_this_year = 0
         invested_in_GIA_this_year = 0
-        isa_allowance_remaining = 20000 # TODO: Make this configurable?
+        isa_allowance_remaining = hmrc.ISA_ANNUAL_ALLOWANCE
 
         if cash_above_buffer > 0 and isa_allowance_remaining > 0:
             money_for_ISA = min(cash_above_buffer, isa_allowance_remaining)

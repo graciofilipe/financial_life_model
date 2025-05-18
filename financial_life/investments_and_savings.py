@@ -1,29 +1,59 @@
 import logging
 import math # Import math for isnan check
 
-class DisposableCash:
-    """Represents readily available cash, not subject to investment growth or interest."""
-    def __init__(self, initial_value=0):
-        self.asset_value = initial_value
+# UNIT TESTING: Test grow_per_year, basic put_money/get_money (especially edge cases like zero/negative amounts, insufficient funds).
+class InvestmentAccountBase:
+    """Base class for investment accounts."""
+    def __init__(self, initial_value=0.0, growth_rate=0.0):
+        self.asset_value = float(initial_value)
+        self.growth_rate = float(growth_rate)
+
+    def grow_per_year(self):
+        """Applies the annual growth rate to the asset value."""
+        self.asset_value *= (1 + self.growth_rate)
 
     def put_money(self, amount):
-        """Adds money."""
-        self.asset_value += amount
+        """Adds money to the account."""
+        if amount > 0:
+            self.asset_value += amount
+        else:
+            logging.warning(f"Cannot put non-positive amount: {amount} into {self.__class__.__name__}")
 
     def get_money(self, amount):
-        """Withdraws money if sufficient funds exist."""
+        """Withdraws money from the account."""
+        if amount <= 0:
+            logging.warning(f"Cannot get non-positive amount: {amount} from {self.__class__.__name__}")
+            return 0
         if amount <= self.asset_value:
             self.asset_value -= amount
             return amount
         else:
-            logging.warning(msg=f"Insufficient disposable cash. Requested: {amount}, Available: {self.asset_value}")
-            # Return the amount available instead of raising error or returning string
+            # Default behavior for insufficient funds, can be overridden
+            logging.warning(f"Insufficient funds in {self.__class__.__name__}. Requested: {amount}, Available: {self.asset_value}. Returning 0.")
+            return 0
+
+# UNIT TESTING: Test __init__, overridden get_money.
+class DisposableCash(InvestmentAccountBase):
+    """Represents readily available cash, not subject to investment growth or interest."""
+    def __init__(self, initial_value=0):
+        super().__init__(initial_value=initial_value, growth_rate=0)
+
+    def get_money(self, amount):
+        """Withdraws money if sufficient funds exist."""
+        if amount <= 0: # Keep this check or rely on base
+            logging.warning(f"Cannot get non-positive amount: {amount} from {self.__class__.__name__}")
+            return 0
+        if amount <= self.asset_value:
+            self.asset_value -= amount
+            return amount
+        else:
+            logging.warning(msg=f"Insufficient funds in {self.__class__.__name__}. Requested: {amount}, Available: {self.asset_value}. Returning available.")
             available_amount = self.asset_value
             self.asset_value = 0
             return available_amount
 
 
-class StocksAndSharesISA:
+class StocksAndSharesISA(InvestmentAccountBase):
     """Represents a Stocks and Shares ISA account (tax-free growth)."""
     def __init__(self, initial_value=0, growth_rate=0.03):
         """
@@ -33,29 +63,11 @@ class StocksAndSharesISA:
             initial_value (float): Starting value of the ISA.
             growth_rate (float): Assumed annual growth rate (e.g., 0.03 for 3%).
         """
-        self.asset_value = initial_value
-        self.growth_rate = growth_rate
-
-    def put_money(self, amount):
-        """Adds money to the ISA."""
-        if amount > 0:
-            self.asset_value += amount
-
-    def get_money(self, amount):
-        """Withdraws money from the ISA if sufficient funds exist."""
-        if amount <= self.asset_value:
-            self.asset_value -= amount
-            return amount
-        else:
-            logging.warning(msg=f"Insufficient funds in ISA. Requested: {amount}, Available: {self.asset_value}. Returning 0.")
-            return 0 # Return 0 to indicate failure clearly
-
-    def grow_per_year(self):
-        """Applies the annual growth rate to the asset value."""
-        self.asset_value *= (1 + self.growth_rate)
+        super().__init__(initial_value, growth_rate)
+        # put_money and get_money can be inherited from InvestmentAccountBase
 
 
-class PensionAccount:
+class PensionAccount(InvestmentAccountBase):
     """Represents a Pension account (tax relief on contribution, growth is tax-deferred)."""
     def __init__(self, initial_value=0, growth_rate=0.03):
         """
@@ -65,29 +77,13 @@ class PensionAccount:
             initial_value (float): Starting value of the pension pot.
             growth_rate (float): Assumed annual growth rate.
         """
-        self.asset_value = initial_value
-        self.growth_rate = growth_rate
-
-    def put_money(self, amount):
-        """Adds money to the pension pot."""
-        if amount > 0:
-            self.asset_value += amount
-
-    def get_money(self, amount):
-        """Withdraws money from the pension pot if sufficient funds exist."""
-        # Note: Tax implications of withdrawal are handled outside this class (in simulation logic).
-        if amount <= self.asset_value:
-            self.asset_value -= amount
-            return amount
-        else:
-            logging.warning(msg=f"Insufficient funds in Pension. Requested: {amount}, Available: {self.asset_value}. Returning 0.")
-            return 0 # Return 0 clearly
-
-    def grow_per_year(self):
-        """Applies the annual growth rate to the asset value."""
-        self.asset_value *= (1 + self.growth_rate)
+        super().__init__(initial_value, growth_rate)
+        # put_money and get_money can be inherited from InvestmentAccountBase
+        # grow_per_year is inherited from InvestmentAccountBase
 
 
+# UNIT TESTING: Thoroughly test __init__ (various initial states), put_money (updates to units, avg_price, value), 
+# get_money (units sold, capital gains, state updates), grow_per_year. Cover edge cases like selling all units, zero balances.
 class GeneralInvestmentAccount:
     """Represents a General Investment Account (subject to Capital Gains Tax)."""
     def __init__(self, initial_value=0, initial_units=0, initial_average_buy_price=1, growth_rate=0.03):
@@ -104,37 +100,44 @@ class GeneralInvestmentAccount:
         self.units = float(initial_units)
         self.growth_rate = float(growth_rate)
 
-        # Handle potential division by zero or invalid inputs for initial prices
-        if self.units > 0 and self.asset_value >= 0:
-            # If average buy price is provided and valid, use it.
-            if initial_average_buy_price > 0:
-                 self.average_unit_buy_price = float(initial_average_buy_price)
-                 # Set current price based on initial value and units, could differ from avg buy price
-                 self.current_unit_price = self.asset_value / self.units
-            else:
-                 # If no valid buy price provided, calculate from value and units
-                 self.average_unit_buy_price = self.asset_value / self.units
-                 self.current_unit_price = self.average_unit_buy_price # Assume current price = avg buy price initially
-        elif self.units == 0 and self.asset_value == 0:
-             # Empty account initialization
-             self.average_unit_buy_price = 0.0
-             self.current_unit_price = 1.0 # Assign a nominal starting price (e.g., 1) for future buys
-        else:
-             # Inconsistent state (e.g., value without units or vice-versa) - log warning
-             logging.warning(f"Inconsistent GIA initial state: Value={self.asset_value}, Units={self.units}. Resetting prices.")
-             # Reset to a safe state or raise an error? Resetting for now.
-             self.average_unit_buy_price = 0.0
-             self.current_unit_price = 1.0 # Nominal price
+        # Determine initial prices
+        if self.units > 0:
+            # If initial_average_buy_price is provided and valid, prioritize it
+            if initial_average_buy_price is not None and initial_average_buy_price > 0:
+                self.average_unit_buy_price = float(initial_average_buy_price)
+                # Current unit price is based on the total asset value and units
+                self.current_unit_price = self.asset_value / self.units
+            # Else, derive average_unit_buy_price from initial_value and initial_units
+            elif self.asset_value >= 0 : # self.units > 0 is already true here
+                self.average_unit_buy_price = self.asset_value / self.units
+                self.current_unit_price = self.average_unit_buy_price
+            else: # Fallback for inconsistent data (e.g. negative asset_value with positive units)
+                logging.warning(f"Inconsistent GIA initial state: Value={self.asset_value}, Units={self.units}. Setting prices to 0.")
+                self.average_unit_buy_price = 0.0
+                self.current_unit_price = 0.0
+        elif self.units == 0: # No units
+            self.average_unit_buy_price = 0.0
+            if self.asset_value == 0: # No units and no value - standard empty account
+                self.current_unit_price = 1.0 # Default for future buys
+            else: # No units but has value - inconsistent state
+                logging.warning(f"Inconsistent GIA initial state: Value={self.asset_value}, Units={self.units}. Current price set to 0.")
+                self.current_unit_price = 0.0 # Or handle as an error
+        else: # Negative units - invalid state
+            logging.error(f"Invalid GIA initial state: Units={self.units}. Resetting prices to 0.")
+            self.average_unit_buy_price = 0.0
+            self.current_unit_price = 0.0
+            self.asset_value = 0.0 # Also reset asset value if units are negative
+            self.units = 0.0
 
-        # Ensure prices are not NaN if calculations resulted in it
-        if math.isnan(self.average_unit_buy_price): self.average_unit_buy_price = 0.0
-        if math.isnan(self.current_unit_price): self.current_unit_price = 1.0
+        # self.average_unit_buy_price and self.current_unit_price should be valid numbers now.
+        # No math.isnan checks needed if logic above is sound.
 
 
     def put_money(self, amount):
         """Adds money to the GIA, buying units at the current price."""
         if amount <= 0 or self.current_unit_price <= 0:
             # Cannot invest zero/negative amount or if price is non-positive
+            logging.warning(f"Cannot put non-positive amount or use non-positive price for GIA. Amount: {amount}, Price: {self.current_unit_price}")
             return
 
         units_to_add = amount / self.current_unit_price
@@ -161,7 +164,9 @@ class GeneralInvestmentAccount:
             float: 0 if insufficient funds or invalid request.
         """
         if amount <= 0:
+            logging.warning(f"Cannot get non-positive amount: {amount} from GIA")
             return 0 # Cannot withdraw zero/negative
+
         if amount > self.asset_value or self.current_unit_price <= 0 or self.units <= 0:
             logging.warning(f"Insufficient funds or invalid state in GIA. Requested: {amount}, Available: {self.asset_value}. Units: {self.units}. Price: {self.current_unit_price}. Returning 0.")
             return 0 # Insufficient funds or cannot sell
@@ -181,16 +186,15 @@ class GeneralInvestmentAccount:
         self.units -= units_to_remove
 
         # Handle potential floating point inaccuracies leading to tiny negative values
-        if self.units < 1e-9:
-            self.units = 0
-            self.asset_value = 0
-            self.average_unit_buy_price = 0 # Reset average price if empty
-        elif self.units > 0 and self.asset_value < 1e-9:
-             # If units exist but value is near zero, recalculate value
-             self.asset_value = self.units * self.current_unit_price
+        if self.units < 1e-9: # Consider a small epsilon for float comparison
+            self.units = 0.0
+            self.asset_value = 0.0
+            self.average_unit_buy_price = 0.0 # Reset average price if empty
+        elif self.units > 0 and self.asset_value < 1e-9: # Similar check for asset_value
+             self.asset_value = 0.0 # Or recalculate: self.units * self.current_unit_price
 
 
-        return actual_amount_removed, max(0, capital_gains) # Ensure gains aren't negative
+        return actual_amount_removed, max(0.0, capital_gains) # Ensure gains aren't negative
 
     def grow_per_year(self):
         """Applies annual growth to the unit price and updates asset value."""
@@ -199,11 +203,13 @@ class GeneralInvestmentAccount:
             self.current_unit_price *= (1 + self.growth_rate)
             self.asset_value = self.units * self.current_unit_price
         else:
-            # If no units, value should be zero
-            self.asset_value = 0
+            # If no units, value should be zero, current_unit_price can still grow
+            self.current_unit_price *= (1 + self.growth_rate) # Price can grow even with no units
+            self.asset_value = 0.0
 
 
-class FixedInterest:
+# UNIT TESTING: Test __init__, overridden get_money, pay_interest().
+class FixedInterest(InvestmentAccountBase):
     """Represents a simple fixed interest savings account (interest is taxable)."""
     def __init__(self, initial_value=0, interest_rate=0.02):
         """
@@ -213,21 +219,21 @@ class FixedInterest:
             initial_value (float): Starting balance.
             interest_rate (float): Annual interest rate (e.g., 0.02 for 2%).
         """
-        self.asset_value = initial_value
+        super().__init__(initial_value=initial_value, growth_rate=0) # Fixed interest doesn't grow via growth_rate
         self.interest_rate = interest_rate
 
-    def put_money(self, amount):
-        """Adds money."""
-        if amount > 0:
-            self.asset_value += amount
+    # put_money can be inherited from InvestmentAccountBase
 
     def get_money(self, amount):
         """Withdraws money if sufficient funds exist."""
+        if amount <= 0: # Keep this check or rely on base
+            logging.warning(f"Cannot get non-positive amount: {amount} from {self.__class__.__name__}")
+            return 0
         if amount <= self.asset_value:
             self.asset_value -= amount
             return amount
         else:
-            logging.warning(msg=f"Insufficient funds in Fixed Interest. Requested: {amount}, Available: {self.asset_value}. Returning available.")
+            logging.warning(msg=f"Insufficient funds in {self.__class__.__name__}. Requested: {amount}, Available: {self.asset_value}. Returning available.")
             available_amount = self.asset_value
             self.asset_value = 0
             return available_amount # Return what's available

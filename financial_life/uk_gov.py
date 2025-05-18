@@ -1,5 +1,17 @@
 
 class TaxMan:
+    PENSION_THRESHOLD_INCOME_LIMIT = 200000
+    PENSION_STANDARD_ANNUAL_ALLOWANCE = 60000
+    PENSION_MINIMUM_TAPERED_ALLOWANCE = 10000
+    PENSION_ADJUSTED_INCOME_TAPER_THRESHOLD = 260000
+    ISA_ANNUAL_ALLOWANCE = 20000
+
+    # UNIT TESTING: Each calculation method needs thorough testing with various inputs.
+    # - calculate_uk_income_tax: Different bands, thresholds, zero income, personal allowance tapering.
+    # - calculate_uk_national_insurance: Below LEL, between LEL/UEL, above UEL.
+    # - capital_gains_tax_due: Gains below, at, and above allowance.
+    # - pension_allowance: Complex; test various incomes (thresholds, tapering) and contributions.
+    # - taxable_interest: Different income levels (for PSA) and interest amounts.
     def __init__(self):
         self.tax_bands = [37700, 125140]
         self.basic_rate = 0.2
@@ -47,10 +59,10 @@ class TaxMan:
         adjusted_income = taxable_income_post_pension + individual_pension_contribution + employer_contribution
         
         #tapered_allowance 
-        if threshold_income < 200000:
-            tapered_allowance = 60000
+        if threshold_income < self.PENSION_THRESHOLD_INCOME_LIMIT:
+            tapered_allowance = self.PENSION_STANDARD_ANNUAL_ALLOWANCE
         else:
-            tapered_allowance = min(max(10000, 60000 - (adjusted_income - 260000)/2), 60000)
+            tapered_allowance = min(max(self.PENSION_MINIMUM_TAPERED_ALLOWANCE, self.PENSION_STANDARD_ANNUAL_ALLOWANCE - (adjusted_income - self.PENSION_ADJUSTED_INCOME_TAPER_THRESHOLD)/2), self.PENSION_STANDARD_ANNUAL_ALLOWANCE)
 
         return tapered_allowance
 
