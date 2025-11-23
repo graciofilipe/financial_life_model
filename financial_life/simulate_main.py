@@ -97,12 +97,37 @@ def run_monte_carlo(params):
     # quantile(0.5) returns a Series indexed by Year. No need to unstack.
     stats_df_cash = combined_df.groupby('Year')['Cash'].quantile(0.5)
 
-    # Create a "Summary DataFrame" that looks like a single run result for compatibility
-    # We use the Medians as the representative values
+    # Create a comprehensive "Summary DataFrame" containing all percentile info
     summary_df = pd.DataFrame(index=stats_df.index)
+    
+    # Assets Percentiles
+    for col in stats_df.columns:
+        summary_df[f'Total Assets_{col}'] = stats_df[col] # e.g. 'Total Assets_Assets_10th' -> simplifying names below
+        
+    # Utility Percentiles
+    for col in stats_df_utility.columns:
+        summary_df[f'Utility Value_{col}'] = stats_df_utility[col]
+
+    # Cash Median
+    summary_df['Cash_Median'] = stats_df_cash
+    
+    # Standardize names for Streamlit simple plotting (Median as default)
     summary_df['Total Assets'] = stats_df['Median']
     summary_df['Utility Value'] = stats_df_utility['Median']
     summary_df['Cash'] = stats_df_cash
+    
+    # Map specific percentile names for easier access in Streamlit
+    # Assets
+    summary_df['Total Assets_10th'] = stats_df['Assets_10th']
+    summary_df['Total Assets_25th'] = stats_df['Assets_25th']
+    summary_df['Total Assets_75th'] = stats_df['Assets_75th']
+    summary_df['Total Assets_90th'] = stats_df['Assets_90th']
+    
+    # Utility
+    summary_df['Utility Value_10th'] = stats_df_utility['Utility_10th']
+    summary_df['Utility Value_25th'] = stats_df_utility['Utility_25th']
+    summary_df['Utility Value_75th'] = stats_df_utility['Utility_75th']
+    summary_df['Utility Value_90th'] = stats_df_utility['Utility_90th']
     
     # Create Spaghetti Plot / Fan Chart
     plots = {}

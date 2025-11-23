@@ -80,6 +80,7 @@ def get_scenario_inputs(prefix, default_overrides={}):
     st.caption("Strategy & Utility")
     buffer_mult = st.number_input("Buffer Multiplier", value=1.2, step=0.1, key=k("buffer"))
     util_baseline = st.number_input("Utility Baseline", value=30000.0, key=k("util_base"))
+    fail_penalty = st.number_input("Failure Penalty Exponent", value=2.0, step=0.1, format="%.1f", help="Exponent for unpaid costs penalty (1.0=Linear, 2.0=Quadratic).", key=k("fail_pen"))
     stress_crash = st.slider("Crash at Retirement (%)", 0.0, 0.5, 0.0, 0.05, key=k("crash"))
 
     return {
@@ -105,6 +106,7 @@ def get_scenario_inputs(prefix, default_overrides={}):
         "buffer_multiplier": buffer_mult,
         "utility_baseline": util_baseline,
         "stress_test_market_crash_pct": stress_crash,
+        "failure_penalty_exponent": fail_penalty,
         # --- Fixed/Hidden/Advanced Defaults (to simplify UI for now) ---
         "fixed_interest_rate": 0.02,
         "NSI_interest_rate": 0.02,
@@ -119,8 +121,7 @@ def get_scenario_inputs(prefix, default_overrides={}):
         "utility_exp_rate": 0.005,
         "non_linear_utility": 0.99,
         "utility_discount_rate": 0.001,
-        "volatility_penalty": 100000.0,
-        "failure_penalty_exponent": 2.0
+        "volatility_penalty": 100000.0
     }
 
 # --- Sidebar Layout ---
@@ -208,11 +209,29 @@ if submit_btn:
     st.subheader("Visual Comparisons")
     
     if df_a is not None and df_b is not None:
+        # Helper to add percentile lines if they exist
+        def add_percentiles(fig, df, name, color, dash_style):
+            # Check for one of the percentiles to see if MC data exists
+            if f'Total Assets_10th' in df.columns:
+                # 10th - 90th band
+                fig.add_trace(go.Scatter(x=df.index, y=df['Total Assets_90th'], mode='lines', line=dict(width=0), showlegend=False, hoverinfo='skip'))
+                fig.add_trace(go.Scatter(x=df.index, y=df['Total Assets_10th'], mode='lines', line=dict(width=0), fill='tonexty', fillcolor=color.replace('rgb', 'rgba').replace(')', ',0.1)'), showlegend=False, hoverinfo='skip'))
+                
+                # 25th - 75th band
+                fig.add_trace(go.Scatter(x=df.index, y=df['Total Assets_75th'], mode='lines', line=dict(width=0), showlegend=False, hoverinfo='skip'))
+                fig.add_trace(go.Scatter(x=df.index, y=df['Total Assets_25th'], mode='lines', line=dict(width=0), fill='tonexty', fillcolor=color.replace('rgb', 'rgba').replace(')', ',0.2)'), showlegend=False, hoverinfo='skip'))
+
         # 1. Total Assets Overlay
         fig_assets = go.Figure()
-        fig_assets.add_trace(go.Scatter(x=df_a.index, y=df_a['Total Assets'], mode='lines', name='Scenario A', line=dict(color='blue')))
-        fig_assets.add_trace(go.Scatter(x=df_b.index, y=df_b['Total Assets'], mode='lines', name='Scenario B', line=dict(color='orange', dash='dash')))
-        fig_assets.update_layout(title="Total Assets Comparison", xaxis_title="Year", yaxis_title="Value (£)")
+        # Scenario A
+        fig_assets.add_trace(go.Scatter(x=df_a.index, y=df_a['Total Assets'], mode='lines', name='Scenario A (Median)', line=dict(color='rgb(0,0,255)')))
+        add_percentiles(fig_assets, df_a, 'Scenario A', 'rgb(0,0,255)', None)
+        
+        # Scenario B
+        fig_assets.add_trace(go.Scatter(x=df_b.index, y=df_b['Total Assets'], mode='lines', name='Scenario B (Median)', line=dict(color='rgb(255,165,0)', dash='dash')))
+        add_percentiles(fig_assets, df_b, 'Scenario B', 'rgb(255,165,0)', 'dash')
+        
+        fig_assets.update_layout(title="Total Assets Comparison (with Monte Carlo Bands)", xaxis_title="Year", yaxis_title="Value (£)")
         st.plotly_chart(fig_assets, use_container_width=True)
 
         # 2. Utility Overlay
