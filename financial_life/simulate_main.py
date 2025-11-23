@@ -118,6 +118,8 @@ def main():
     parser.add_argument("--final_year", type=int, default=2074, help="Simulation end year.")
     parser.add_argument("--retirement_year", type=int, default=2055, help="Year of retirement.")
 
+    parser.add_argument("--pension_lump_sum_spread_years", type=int, default=1, help="Number of years to spread the pension tax-free lump sum over (Phased Drawdown).")
+
     # --- Initial Capital Arguments ---
     parser.add_argument("--starting_cash", type=float, default=5000, help="Initial cash on hand.")
     parser.add_argument("--fixed_interest_capital", type=float, default=1000, help="Initial capital in fixed interest account.")
@@ -139,6 +141,8 @@ def main():
     parser.add_argument("--living_costs_rate_pre_retirement", type=float, default=0.02, help="Annual living costs growth rate before retirement (e.g., 0.02 for 2%).")
     parser.add_argument("--living_costs_rate_post_retirement", type=float, default=0.04, help="Annual living costs growth rate after retirement (e.g., 0.04 for 4%).")
     parser.add_argument("--salary_growth_rate", type=float, default=0.01, help="Annual gross salary growth rate (e.g., 0.01 for 1%).")
+    parser.add_argument("--salary_growth_stop_year", type=int, default=None, help="Year after which salary growth stops (plateaus). If not set, grows until retirement.")
+    parser.add_argument("--salary_post_plateau_growth_rate", type=float, default=0.0, help="Annual salary growth rate AFTER the stop year (e.g., -0.01 for 1% decline). Default 0.0.")
     # --- Base Value Arguments ---
     parser.add_argument("--base_living_cost", type=float, default=20000, help="Base living cost amount in the start year.")
     parser.add_argument("--base_salary", type=float, default=100000, help="Base gross salary amount in the year before the start year.")
@@ -162,7 +166,17 @@ def main():
     parser.add_argument("--log_level", default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], help="Set the logging level for console output.")
     parser.add_argument("--save_debug_data", action='store_true', help="Save the detailed debug DataFrame to GCS.")
 
+    # --- One-Off Expenses ---
+    parser.add_argument("--one_off_expenses", type=str, default="{}", help="JSON string mapping years to one-off expense amounts (e.g., '{\"2030\": 50000}').")
+
     args = parser.parse_args()
+
+    # --- Parse One-Off Expenses ---
+    try:
+        args.one_off_expenses = json.loads(args.one_off_expenses)
+    except json.JSONDecodeError as e:
+        print(f"Error parsing --one_off_expenses: {e}")
+        sys.exit(1)
 
     # --- Setup Logging ---
     log_level_numeric = getattr(logging, args.log_level.upper(), logging.INFO)

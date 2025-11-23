@@ -65,6 +65,9 @@ with st.sidebar.form(key='simulation_params'):
     st.subheader("Base Values (£)")
     in_base_living_cost = st.number_input("Base Living Cost (Start Year)", value=20000.0, format="%.2f", help="Base living cost amount in the start year.")
     in_base_salary = st.number_input("Base Salary (Year before Start)", value=100000.0, format="%.2f", help="Base gross salary amount in the year before the start year.")
+    
+    # --- One-Off Expenses ---
+    in_one_off_expenses_str = st.text_area("One-Off Expenses (JSON)", value="{}", help="Enter a JSON dictionary mapping years to amounts. E.g., {\"2030\": 50000, \"2040\": 20000}")
 
     # --- Annual Rates & Growth (%) ---
     st.subheader("Annual Rates & Growth (%)")
@@ -77,12 +80,15 @@ with st.sidebar.form(key='simulation_params'):
     in_living_costs_rate_pre_retirement = st.number_input("Living Costs Growth Rate (Pre-Retirement)", value=0.02, format="%.4f", step=0.001, help=rate_help_text)
     in_living_costs_rate_post_retirement = st.number_input("Living Costs Growth Rate (Post-Retirement)", value=0.04, format="%.4f", step=0.001, help=rate_help_text)
     in_salary_growth_rate = st.number_input("Salary Growth Rate", value=0.01, format="%.4f", step=0.001, help=rate_help_text)
+    in_salary_growth_stop_year = st.number_input("Salary Growth Stop Year (Plateau)", value=int(in_retirement_year), help="Year after which salary stops growing. Set to Retirement Year for continuous growth.")
+    in_salary_post_plateau_growth_rate = st.number_input("Salary Post-Plateau Rate", value=0.0, format="%.4f", step=0.001, help="Annual rate after the stop year. Use negative values (e.g. -0.01) for salary decline.")
 
     # --- Employment & Pension Contributions (%) ---
     st.subheader("Employment & Pension Contributions (%)")
     contrib_help_text = "Enter as a decimal (e.g., 0.07 for 7%)"
     in_employee_pension_contributions_pct = st.number_input("Employee Pension Contributions Pct", value=0.07, format="%.4f", step=0.001, help=contrib_help_text)
     in_employer_pension_contributions_pct = st.number_input("Employer Pension Contributions Pct", value=0.07, format="%.4f", step=0.001, help=contrib_help_text)
+    in_pension_lump_sum_spread_years = st.number_input("Pension Lump Sum Spread Years", value=1, min_value=1, max_value=20, help="Number of years to spread the tax-free lump sum over.")
 
     # --- Strategy ---
     st.subheader("Strategy")
@@ -95,6 +101,7 @@ with st.sidebar.form(key='simulation_params'):
     in_utility_exp_rate = st.number_input("Utility Exponential Rate (%/Year)", value=0.005, format="%.4f", step=0.0001, help=rate_help_text + " for utility growth.")
     in_non_linear_utility = st.number_input("Non-Linear Utility Exponent", value=0.99, format="%.4f", step=0.01, help="Exponent for calculating actual utility from spending (e.g., 0.5 for sqrt).")
     in_utility_discount_rate = st.number_input("Utility Discount Rate (%/Year)", value=0.001, format="%.4f", step=0.0001, help=rate_help_text + " for NPV calculation.")
+    in_volatility_penalty = st.number_input("Volatility Penalty", value=100000.0, format="%.0f", step=1000.0, help="Penalty factor for utility volatility (stdev/mean) in the final metric.")
 
     # --- Troubleshooting ---
     st.subheader("Troubleshooting")
@@ -116,6 +123,21 @@ if submitted:
         st.sidebar.error("GCS Bucket Name is required.")
         # Stop processing this specific submission
     else:
+        # --- Parse One-Off Expenses ---
+        import json
+        try:
+            one_off_expenses_dict = json.loads(in_one_off_expenses_str)
+            # Basic type check: keys should be convertible to int, values to float
+            for k, v in one_off_expenses_dict.items():
+                int(k)
+                float(v)
+        except ValueError as e:
+            st.sidebar.error(f"Invalid One-Off Expenses format. Must be valid JSON with year keys and numeric amounts. Error: {e}")
+            st.stop()
+        except Exception as e:
+            st.sidebar.error(f"Error parsing One-Off Expenses: {e}")
+            st.stop()
+
         # --- Collect Inputs into Dictionary (AFTER validation) ---
         
         params_dict = {
@@ -140,20 +162,24 @@ if submitted:
             "living_costs_rate_pre_retirement": in_living_costs_rate_pre_retirement,
             "living_costs_rate_post_retirement": in_living_costs_rate_post_retirement,
             "salary_growth_rate": in_salary_growth_rate,
+            "salary_growth_stop_year": int(in_salary_growth_stop_year),
+            "salary_post_plateau_growth_rate": in_salary_post_plateau_growth_rate,
             "base_living_cost": in_base_living_cost,
             "base_salary": in_base_salary,
             "employee_pension_contributions_pct": in_employee_pension_contributions_pct,
             "employer_pension_contributions_pct": in_employer_pension_contributions_pct,
+            "pension_lump_sum_spread_years": int(in_pension_lump_sum_spread_years),
             "buffer_multiplier": in_buffer_multiplier,
             "utility_baseline": in_utility_baseline,
             "utility_linear_rate": in_utility_linear_rate,
             "utility_exp_rate": in_utility_exp_rate,
             "non_linear_utility": in_non_linear_utility,
             "utility_discount_rate": in_utility_discount_rate,
-            "volatility_penalty": 0,
+            "volatility_penalty": in_volatility_penalty,
             "log_level": in_log_level,
-            # Save debug data to GCS if a bucket name is provided, independent of UI display.
-            "save_debug_data": True if in_bucket_name else False,
+            "one_off_expenses": one_off_expenses_dict,
+            # Pass the checkbox state to the simulation function's save_debug_data param.
+            "save_debug_data": in_show_debug_data
         }
 
         # --- Convert Dictionary to Namespace ---

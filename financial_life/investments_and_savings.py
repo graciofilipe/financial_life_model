@@ -9,18 +9,33 @@ class InvestmentAccountBase:
         self.growth_rate = float(growth_rate)
 
     def grow_per_year(self):
-        """Applies the annual growth rate to the asset value."""
+        """
+        Applies the annual growth rate to the asset value.
+        """
         self.asset_value *= (1 + self.growth_rate)
 
     def put_money(self, amount):
-        """Adds money to the account."""
+        """
+        Adds money to the account.
+        
+        Args:
+            amount (float): The amount to add.
+        """
         if amount > 0:
             self.asset_value += amount
         else:
             logging.warning(f"Cannot put non-positive amount: {amount} into {self.__class__.__name__}")
 
     def get_money(self, amount):
-        """Withdraws money from the account."""
+        """
+        Withdraws money from the account.
+        
+        Args:
+            amount (float): The amount to withdraw.
+
+        Returns:
+            float: The amount withdrawn.
+        """
         if amount <= 0:
             logging.warning(f"Cannot get non-positive amount: {amount} from {self.__class__.__name__}")
             return 0
@@ -39,7 +54,15 @@ class DisposableCash(InvestmentAccountBase):
         super().__init__(initial_value=initial_value, growth_rate=0)
 
     def get_money(self, amount):
-        """Withdraws money if sufficient funds exist."""
+        """
+        Withdraws money if sufficient funds exist.
+        
+        Args:
+            amount (float): The amount to withdraw.
+
+        Returns:
+            float: The amount withdrawn. Returns the total available if requested amount exceeds balance.
+        """
         if amount <= 0: # Keep this check or rely on base
             logging.warning(f"Cannot get non-positive amount: {amount} from {self.__class__.__name__}")
             return 0
@@ -129,12 +152,14 @@ class GeneralInvestmentAccount:
             self.asset_value = 0.0 # Also reset asset value if units are negative
             self.units = 0.0
 
-        # self.average_unit_buy_price and self.current_unit_price should be valid numbers now.
-        # No math.isnan checks needed if logic above is sound.
-
 
     def put_money(self, amount):
-        """Adds money to the GIA, buying units at the current price."""
+        """
+        Adds money to the GIA, buying units at the current price.
+
+        Args:
+            amount (float): The amount to invest.
+        """
         if amount <= 0 or self.current_unit_price <= 0:
             # Cannot invest zero/negative amount or if price is non-positive
             logging.warning(f"Cannot put non-positive amount or use non-positive price for GIA. Amount: {amount}, Price: {self.current_unit_price}")
@@ -197,7 +222,9 @@ class GeneralInvestmentAccount:
         return actual_amount_removed, max(0.0, capital_gains) # Ensure gains aren't negative
 
     def grow_per_year(self):
-        """Applies annual growth to the unit price and updates asset value."""
+        """
+        Applies annual growth to the unit price and updates asset value.
+        """
         # Only grow if there are units
         if self.units > 0:
             self.current_unit_price *= (1 + self.growth_rate)
@@ -222,10 +249,16 @@ class FixedInterest(InvestmentAccountBase):
         super().__init__(initial_value=initial_value, growth_rate=0) # Fixed interest doesn't grow via growth_rate
         self.interest_rate = interest_rate
 
-    # put_money can be inherited from InvestmentAccountBase
-
     def get_money(self, amount):
-        """Withdraws money if sufficient funds exist."""
+        """
+        Withdraws money if sufficient funds exist.
+        
+        Args:
+            amount (float): The amount to withdraw.
+
+        Returns:
+            float: The amount withdrawn. Returns the total available if requested amount exceeds balance.
+        """
         if amount <= 0: # Keep this check or rely on base
             logging.warning(f"Cannot get non-positive amount: {amount} from {self.__class__.__name__}")
             return 0
@@ -239,7 +272,12 @@ class FixedInterest(InvestmentAccountBase):
             return available_amount # Return what's available
 
     def pay_interest(self):
-        """Calculates the gross interest earned for the year."""
+        """
+        Calculates the gross interest earned for the year based on the current balance.
+
+        Returns:
+            float: The gross interest amount.
+        """
         # Note: Does not add to asset_value here; simulation logic handles adding to cash.
         # Tax is handled outside this class.
         return self.asset_value * self.interest_rate

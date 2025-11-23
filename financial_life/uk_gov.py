@@ -1,5 +1,8 @@
-
 class TaxMan:
+    """
+    Encapsulates UK government tax rules, including income tax, national insurance,
+    capital gains tax, and pension allowances.
+    """
     PENSION_THRESHOLD_INCOME_LIMIT = 200000
     PENSION_STANDARD_ANNUAL_ALLOWANCE = 60000
     PENSION_MINIMUM_TAPERED_ALLOWANCE = 10000
@@ -23,16 +26,34 @@ class TaxMan:
         self.higher_rate_interest_allowance = 500
         self.additional_rate_interest_allowance = 0
         self.capital_gains_tax_allowance = 3000
-        self.capital_gains_tax_rate = 0.2
+        self.capital_gains_tax_rate = 0.24
 
 
     def capital_gains_tax_due(self, capital_gains):
+        """
+        Calculates the Capital Gains Tax due on investment gains.
+
+        Args:
+            capital_gains (float): The total capital gains realized.
+
+        Returns:
+            float: The amount of tax due.
+        """
         taxable_gains = max(0, capital_gains - self.capital_gains_tax_allowance)
         return taxable_gains * self.capital_gains_tax_rate
 
 
 
     def calculate_tax_band(self, taxable_income):
+        """
+        Determines the highest tax band applicable to the given taxable income.
+
+        Args:
+            taxable_income (float): The total taxable income.
+
+        Returns:
+            str: The tax band ("basic rate", "higher rate", or "additional rate").
+        """
         if taxable_income <= self.tax_bands[0]:
             return "basic rate"
         elif taxable_income >= self.tax_bands[1]:
@@ -41,6 +62,15 @@ class TaxMan:
             return "higher rate"
 
     def calculate_interest_allowance(self, taxable_income):
+        """
+        Calculates the Personal Savings Allowance based on the tax band.
+
+        Args:
+            taxable_income (float): The total taxable income used to determine the tax band.
+
+        Returns:
+            int: The interest allowance amount (1000, 500, or 0).
+        """
         tax_band = self.calculate_tax_band(taxable_income)
         if tax_band == "basic rate":
             return self.basic_rate_interest_allowance
@@ -50,11 +80,32 @@ class TaxMan:
             return self.additional_rate_interest_allowance
 
     def taxable_interest(self, taxable_income, gross_interest):
+        """
+        Calculates the amount of interest income that is subject to tax.
+
+        Args:
+            taxable_income (float): The total taxable income (used to determine allowance).
+            gross_interest (float): The total gross interest earned.
+
+        Returns:
+            float: The taxable portion of the interest.
+        """
         interest_allowance = self.calculate_interest_allowance(taxable_income=taxable_income)
         return max(0, gross_interest - interest_allowance)
 
 
     def pension_allowance(self, taxable_income_post_pension, individual_pension_contribution, employer_contribution):
+        """
+        Calculates the annual pension allowance, applying tapering rules for high earners.
+
+        Args:
+            taxable_income_post_pension (float): Taxable income after pension contributions.
+            individual_pension_contribution (float): The individual's pension contribution.
+            employer_contribution (float): The employer's pension contribution.
+
+        Returns:
+            float: The calculated pension allowance for the year.
+        """
         threshold_income = taxable_income_post_pension + individual_pension_contribution
         adjusted_income = taxable_income_post_pension + individual_pension_contribution + employer_contribution
         

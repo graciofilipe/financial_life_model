@@ -3,9 +3,10 @@ import math # Import math for isnan check
 
 
 # UNIT TESTING: Test year generation, correct application of rates, base year handling.
-def generate_living_costs(base_cost, base_year, rate_pre_retirement, rate_post_retirement, retirement_year, final_year):
+def generate_living_costs(base_cost, base_year, rate_pre_retirement, rate_post_retirement, retirement_year, final_year, one_off_expenses=None):
     """
-    Generates a dictionary of projected annual living costs based on provided rates and years.
+    Generates a dictionary of projected annual living costs based on provided rates and years,
+    incorporating one-off expenses.
 
     Args:
         base_cost (float): The living cost in the base_year.
@@ -14,6 +15,7 @@ def generate_living_costs(base_cost, base_year, rate_pre_retirement, rate_post_r
         rate_post_retirement (float): Annual rate of living cost increase after retirement (e.g., 0.04 for 4%).
         retirement_year (int): The year retirement occurs. Costs increase at the pre-retirement rate up to and including this year.
         final_year (int): The final year of the simulation for which costs are calculated.
+        one_off_expenses (dict, optional): A dictionary mapping specific years (int) to additional cost amounts (float).
 
     Returns:
         dict: A dictionary where keys are years (int) and values are projected living costs (float).
@@ -42,55 +44,94 @@ def generate_living_costs(base_cost, base_year, rate_pre_retirement, rate_post_r
         d1 = {} # No pre-retirement costs in this scenario within the tracked range
 
     # Combine the two dictionaries
-    return {**d1, **d2}
+    combined_costs = {**d1, **d2}
+
+    # Add one-off expenses if provided
+    if one_off_expenses:
+        for year, amount in one_off_expenses.items():
+            # Ensure year key is integer for consistency
+            year_int = int(year)
+            if year_int in combined_costs:
+                combined_costs[year_int] += float(amount)
+            else:
+                # If the year is within the simulation range but somehow not in combined_costs (unlikely given range above),
+                # or if it falls outside, we might want to log it or ignore it. 
+                # Here we only add if it's in the valid range generated.
+                # If the user provides a year outside start-final, it's ignored.
+                 if start_year <= year_int <= final_year:
+                     combined_costs[year_int] = float(amount)
+
+    return combined_costs
 
 # UNIT TESTING: Test year generation, correct application of rates, base year handling.
-def generate_salary(base_salary, base_year, growth_rate, last_work_year):
+def generate_salary(base_salary, base_year, growth_rate, last_work_year, growth_stop_year=None, post_plateau_growth_rate=0.0):
     """
     Generates a dictionary of projected annual gross salaries based on a growth rate and final work year.
+    Allows for a 'plateau' or decline where growth changes after a specific year.
 
     Args:
         base_salary (float): The gross salary in the base_year.
         base_year (int): The year corresponding to the base_salary.
-        growth_rate (float): Annual salary growth rate (e.g., 0.01 for 1%).
+        growth_rate (float): Annual salary growth rate until the stop year (e.g., 0.01 for 1%).
         last_work_year (int): The final year the salary is earned.
+        growth_stop_year (int, optional): The year after which salary growth changes to the post-plateau rate. 
+                                          If None, grows at initial rate until last_work_year.
+        post_plateau_growth_rate (float): Annual salary growth rate AFTER the stop year (e.g., -0.01 for 1% decline).
+                                          Defaults to 0.0 (flat plateau).
 
     Returns:
         dict: A dictionary where keys are years (int) and values are projected gross salaries (float).
     """
-    r = 1 + growth_rate # Convert rate to multiplier
-    # Uses the provided base_salary and base_year
+    r_initial = 1 + growth_rate
+    r_post = 1 + post_plateau_growth_rate
+    
     start_year = base_year # Use the provided base_year
-    # The base_salary argument is used directly in the calculation below
-    # Salary increases at rate r from start_year up to and including last_work_year
-    return {year: base_salary * (r)**(year - start_year) for year in range(start_year, last_work_year + 1)}
+    
+    salaries = {}
+    current_salary = base_salary
+    
+    # Determine the effective stop year for growth
+    effective_growth_stop = growth_stop_year if growth_stop_year is not None else last_work_year
+
+    # Iterate from start_year to last_work_year
+    for year in range(start_year, last_work_year + 1):
+        if year == start_year:
+             salaries[year] = base_salary
+        else:
+             # If the *previous* year was before the stop year, we grow at initial rate.
+             if (year - 1) < effective_growth_stop:
+                 current_salary *= r_initial
+             # Else we grow (or shrink) at the post-plateau rate
+             else:
+                 current_salary *= r_post
+             
+             salaries[year] = current_salary
+
+    return salaries
 
 # UNIT TESTING: Test pre-retirement, retirement year (lump sum), post-retirement years, final year.
 def linear_pension_draw_down_function(pot_value, current_year, retirement_year, final_year):
     """
     Calculates the amount to draw down from the pension pot based on a linear strategy.
-    Takes a 25% tax-free lump sum at retirement, then draws down linearly.
-    """
-    # Take tax-free lump sum at retirement (up to 25% or LTA cap, simplified here)
-    if current_year == retirement_year:
-        # Simplified max lump sum - LTA rules are complex and changing
-        lump_sum_allowance = 268275 # Approx 25% of previous £1,073,100 LTA (use current rules if needed)
-        return min(0.25 * pot_value, lump_sum_allowance)
+    Note: This function now calculates 'Regular Income Drawdown' only. 
+    Tax-free lump sum logic is handled externally in the simulation loop.
 
+    Args:
+        pot_value (float): The current value of the pension pot.
+        current_year (int): The current year of the simulation.
+        retirement_year (int): The year the individual retires.
+        final_year (int): The final year of the simulation.
+
+    Returns:
+        float: The amount to withdraw from the pension pot.
+    """
     # No drawdown before retirement
-    elif current_year < retirement_year:
+    if current_year < retirement_year:
         return 0
 
-    # Linear drawdown after retirement (excluding the retirement year itself)
+    # Linear drawdown after retirement
     else:
-        # Calculate remaining pot after potential lump sum taken in retirement year
-        # The pot_value passed to this function is the current, post-growth value for the year.
-        # The simulation loop ensures that any lump sum taken in the retirement_year would have already
-        # reduced the pot before this function is called in subsequent years with the then-current pot value.
-        # The linear drawdown is therefore calculated on the actual remaining pot after any prior lump sum withdrawal and subsequent growth.
-
-        # Calculate years left for drawdown (inclusive of current year, exclusive of final year?)
-        # If final_year is 2074, and current is 2074, years_left should be 1.
+        # Calculate years left for drawdown (inclusive of current year)
         years_left = max(1, (final_year - current_year) + 1)
         return pot_value / years_left
 

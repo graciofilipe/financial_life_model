@@ -85,16 +85,25 @@ def simulate_a_life(args):
     # --- Initialize List for Detailed Debug Data ---
     debug_data = []
 
+    # --- PCLS (Lump Sum) State ---
+    pcls_annual_amount = 0
+    pcls_years_remaining = 0
+    lump_sum_cap = 268275
+
 
     # --- Setup Simulation Entities ---
     try:
+        # Ensure one_off_expenses exists in args, default to empty dict if not
+        one_off_expenses = getattr(args, 'one_off_expenses', {})
+
         filipe = Human(starting_cash=args.starting_cash,
                        living_costs=generate_living_costs(base_cost=args.base_living_cost,
                                                           base_year=args.start_year,
                                                           rate_pre_retirement=args.living_costs_rate_pre_retirement,
                                                           rate_post_retirement=args.living_costs_rate_post_retirement,
                                                           retirement_year=args.retirement_year,
-                                                          final_year=args.final_year),
+                                                          final_year=args.final_year,
+                                                          one_off_expenses=one_off_expenses),
                        non_linear_utility=args.non_linear_utility,
                        pension_draw_down_function=linear_pension_draw_down_function)
         log_debug_event(debug_data, args.start_year -1, "Init", "Start Cash", args.starting_cash)
@@ -102,7 +111,9 @@ def simulate_a_life(args):
         my_employment = Employment(gross_salary=generate_salary(base_salary=args.base_salary,
                                                                  base_year=args.start_year - 1,
                                                                  growth_rate=args.salary_growth_rate,
-                                                                last_work_year=args.retirement_year - 1),
+                                                                last_work_year=args.retirement_year - 1,
+                                                                growth_stop_year=args.salary_growth_stop_year,
+                                                                post_plateau_growth_rate=args.salary_post_plateau_growth_rate),
                                    employee_pension_contributions_pct=args.employee_pension_contributions_pct,
                                    employer_pension_contributions_pct=args.employer_pension_contributions_pct)
 
@@ -193,23 +204,48 @@ def simulate_a_life(args):
         log_debug_event(debug_data, year, step, "Pension Contribution (Total)", total_pension_contributions)
         my_pension.put_money(total_pension_contributions)
 
-        to_take_from_pension_pot = filipe.pension_draw_down_function(
+        # --- PCLS (Lump Sum) Logic ---
+        if year == args.retirement_year:
+            # Calculate total available PCLS at the moment of retirement
+            total_potential_pcls = min(lump_sum_cap, 0.25 * my_pension.asset_value)
+            pcls_years_remaining = args.pension_lump_sum_spread_years
+            if pcls_years_remaining > 0:
+                pcls_annual_amount = total_potential_pcls / pcls_years_remaining
+            else:
+                pcls_annual_amount = 0 # Should not happen if default is 1
+            
+            log_debug_event(debug_data, year, step, "PCLS Plan Calculated", total_potential_pcls, f"Spread over {pcls_years_remaining} years: {pcls_annual_amount:.2f}/yr")
+
+        lump_sum_to_take_this_year = 0
+        if pcls_years_remaining > 0:
+            lump_sum_to_take_this_year = pcls_annual_amount
+            pcls_years_remaining -= 1
+        
+        # --- Regular Drawdown Logic ---
+        # Note: draw_down_function now returns ONLY the regular income portion
+        regular_drawdown_requested = filipe.pension_draw_down_function(
             pot_value=my_pension.asset_value, current_year=year,
             retirement_year=args.retirement_year, final_year=args.final_year
         )
-        log_debug_event(debug_data, year, step, "Pension Drawdown Requested", to_take_from_pension_pot)
-        taken_from_pension = my_pension.get_money(to_take_from_pension_pot)
+        
+        total_withdrawal_requested = regular_drawdown_requested + lump_sum_to_take_this_year
+        
+        log_debug_event(debug_data, year, step, "Pension Drawdown Requested", total_withdrawal_requested, f"Regular: {regular_drawdown_requested:.2f}, PCLS: {lump_sum_to_take_this_year:.2f}")
+        
+        taken_from_pension = my_pension.get_money(total_withdrawal_requested)
         log_debug_event(debug_data, year, step, "Pension Drawdown Actual", taken_from_pension)
 
-        # Determine Taxable Pension Income
-        if year == args.retirement_year:
-            taxable_pension_income = 0
-            filipe.put_in_cash(taken_from_pension) # Add lump sum to cash
-            log_debug_event(debug_data, year, step, "Cash Add (Pension Lump Sum)", taken_from_pension)
-        elif year > args.retirement_year:
-            taxable_pension_income = taken_from_pension
-        else:
-            taxable_pension_income = 0
+        # --- Split into Taxable and Tax-Free ---
+        # We prioritize the tax-free lump sum portion. 
+        # If we couldn't withdraw enough for the full PCLS, all of it is PCLS.
+        # If we withdrew more than PCLS, the rest is taxable.
+        actual_lump_sum = min(taken_from_pension, lump_sum_to_take_this_year)
+        taxable_pension_income = max(0, taken_from_pension - actual_lump_sum)
+        
+        if actual_lump_sum > 0:
+            filipe.put_in_cash(actual_lump_sum) # Add tax-free cash directly
+            log_debug_event(debug_data, year, step, "Cash Add (Pension PCLS)", actual_lump_sum)
+            
         log_debug_event(debug_data, year, step, "Taxable Pension Income", taxable_pension_income)
 
 
@@ -369,6 +405,38 @@ def simulate_a_life(args):
 
         log_debug_event(debug_data, year, step, "Cash Available (Post-Utility)", filipe.cash)
 
+        # --- 7b. Gains Harvesting Phase ---
+        step = "7b. Gains Harvesting"
+        # Check if we have unused CGT allowance and if the GIA has unrealized gains (price > avg cost)
+        remaining_cgt_allowance = hmrc.capital_gains_tax_allowance - capital_gains
+        # We only harvest if we have allowance AND the price is higher than the buy price
+        if remaining_cgt_allowance > 0 and my_gia.current_unit_price > my_gia.average_unit_buy_price:
+            gain_per_unit = my_gia.current_unit_price - my_gia.average_unit_buy_price
+            
+            # Calculate units to sell to hit the allowance exactly
+            # Target Gain = Units * Gain_Per_Unit  =>  Units = Target / Gain_Per_Unit
+            units_to_harvest = remaining_cgt_allowance / gain_per_unit
+            
+            # Don't sell more than we have
+            units_to_harvest = min(units_to_harvest, my_gia.units)
+            
+            if units_to_harvest > 0:
+                value_to_harvest = units_to_harvest * my_gia.current_unit_price
+                log_debug_event(debug_data, year, step, "Harvesting Attempt", value_to_harvest, f"Target Gain: {remaining_cgt_allowance:.2f}")
+                
+                # Execute sale
+                harvested_amount, harvested_gain = my_gia.get_money(value_to_harvest)
+                
+                # Update state
+                filipe.put_in_cash(harvested_amount)
+                capital_gains += harvested_gain # Add to total gains for the year
+                
+                log_debug_event(debug_data, year, step, "Harvested Amount", harvested_amount)
+                log_debug_event(debug_data, year, step, "Harvested Gain", harvested_gain)
+        else:
+             log_debug_event(debug_data, year, step, "Harvesting Skipped", 0, f"Rem Allowance: {remaining_cgt_allowance:.2f}, Price > Cost: {my_gia.current_unit_price > my_gia.average_unit_buy_price}")
+
+
         # --- 8. Investment Phase (Surplus Cash) ---
         step = "8. Investment"
         cash_above_buffer = max(0, filipe.cash - buffer_amount)
@@ -432,9 +500,18 @@ def simulate_a_life(args):
         all_tax = ni_due + income_tax_due + capital_gains_tax
         all_tax_list.append(all_tax)
         # Net cash inflow calculation for logging
-        net_cash_inflow = (income_after_tax # Net Salary + Net Pension Income
-                          + nsi_interest + gross_interest # Gross Interest (tax accounted for in income_tax_due)
-                          + (taken_from_pension if year == args.retirement_year else 0)) # Lump Sum
+        # income_after_tax variable above = (Taxable Salary + Taxable Pension - Tax - NI)
+        # We need to add back the non-taxable income sources:
+        # 1. NSI & Gross Interest (Since tax was deducted from income_after_tax via income_tax_due, but they were not added to income_after_tax base. Wait. 
+        # Let's look at income_after_tax def: (taxable_salary + taxable_pension_income - income_tax_due - ni_due)
+        # It does NOT include interest. So adding interest here is correct (since interest is cash inflow).
+        # 2. Tax-free portion of pension (Lump Sum).
+        tax_free_pension_portion = max(0, taken_from_pension - taxable_pension_income)
+        
+        net_cash_inflow = (income_after_tax 
+                          + nsi_interest + gross_interest 
+                          + tax_free_pension_portion)
+        
         income_after_tax_list.append(net_cash_inflow)
         living_costs_list.append(living_costs)
         utility_i_can_afford_list.append(utility_i_can_afford)
