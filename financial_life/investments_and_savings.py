@@ -194,11 +194,11 @@ class GeneralInvestmentAccount:
         """
         if amount <= 0:
             logging.warning(f"Cannot get non-positive amount: {amount} from GIA")
-            return 0 # Cannot withdraw zero/negative
+            return 0, 0 # Cannot withdraw zero/negative
 
         if amount > self.asset_value or self.current_unit_price <= 0 or self.units <= 0:
             logging.warning(f"Insufficient funds or invalid state in GIA. Requested: {amount}, Available: {self.asset_value}. Units: {self.units}. Price: {self.current_unit_price}. Returning 0.")
-            return 0 # Insufficient funds or cannot sell
+            return 0, 0 # Insufficient funds or cannot sell
 
         units_to_remove = amount / self.current_unit_price
 

@@ -29,34 +29,73 @@ class TaxMan:
         self.capital_gains_tax_rate = 0.24
 
 
-    def capital_gains_tax_due(self, capital_gains):
+    def capital_gains_tax_due(self, capital_gains, total_taxable_income=0):
         """
         Calculates the Capital Gains Tax due on investment gains.
-
+        
         Args:
             capital_gains (float): The total capital gains realized.
+            total_taxable_income (float): The individual's total taxable income (used to determine rate).
 
         Returns:
             float: The amount of tax due.
         """
         taxable_gains = max(0, capital_gains - self.capital_gains_tax_allowance)
-        return taxable_gains * self.capital_gains_tax_rate
+        
+        if taxable_gains <= 0:
+            return 0
+            
+        tax_band = self.calculate_tax_band(total_taxable_income)
+        
+        if tax_band == "basic rate":
+            # Check how much unused basic rate band is available
+            # Basic rate band width is self.tax_bands[0] (37700)
+            # Taxable income (Post-PA) = total_taxable_income - PA (roughly)
+            # Ideally we use the exact unused band logic, but for now we use the rate based on the starting band.
+            # Strictly speaking, gains can push you into the higher band.
+            # Let's implement the "push" logic.
+            
+            personal_allowance = self.personal_allowance
+            if total_taxable_income > self.personal_allowance_limit:
+                reduction = (total_taxable_income - self.personal_allowance_limit) / 2
+                personal_allowance = max(0, self.personal_allowance - reduction)
+                
+            taxable_income_amount = max(0, total_taxable_income - personal_allowance)
+            unused_basic_band = max(0, self.tax_bands[0] - taxable_income_amount)
+            
+            amount_at_basic = min(taxable_gains, unused_basic_band)
+            amount_at_higher = taxable_gains - amount_at_basic
+            
+            return (amount_at_basic * 0.18) + (amount_at_higher * 0.24)
+            
+        else:
+            # Higher or Additional rate taxpayers pay 24% on all gains
+            return taxable_gains * 0.24
 
 
 
-    def calculate_tax_band(self, taxable_income):
+    def calculate_tax_band(self, gross_income):
         """
-        Determines the highest tax band applicable to the given taxable income.
+        Determines the highest tax band applicable to the given Gross Income.
 
         Args:
-            taxable_income (float): The total taxable income.
+            gross_income (float): The total gross income (before Personal Allowance).
 
         Returns:
             str: The tax band ("basic rate", "higher rate", or "additional rate").
         """
+        # Calculate Personal Allowance for this income level
+        personal_allowance = self.personal_allowance
+        if gross_income > self.personal_allowance_limit:
+            reduction = (gross_income - self.personal_allowance_limit) / 2
+            personal_allowance = max(0, self.personal_allowance - reduction)
+
+        taxable_income = max(0, gross_income - personal_allowance)
+
         if taxable_income <= self.tax_bands[0]:
             return "basic rate"
-        elif taxable_income >= self.tax_bands[1]:
+        elif gross_income >= self.tax_bands[1]: 
+            # tax_bands[1] is 125140 (Gross threshold for Additional Rate)
             return "additional rate"
         else:
             return "higher rate"
@@ -175,11 +214,11 @@ class TaxMan:
             float: The amount of National Insurance contributions due for the year.
         """
 
-        # Annual NI thresholds and rates (approximating 2023/24)
-        lower_threshold = 1048*12 # LEL: Point below which 0 NI is paid
-        upper_threshold = 4189*12 # UEL: Point above which rate drops
-        lower_rate = 0.08 # Rate between PT (approx LEL) and UEL (rate changed in Jan '24, using 8%)
-        upper_rate = 0.02
+        # Annual NI thresholds and rates (2025/26)
+        lower_threshold = 12570 # Primary Threshold
+        upper_threshold = 50270 # Upper Earnings Limit
+        lower_rate = 0.08 # Main rate
+        upper_rate = 0.02 # Additional rate
 
         if annual_pay <= lower_threshold:
             return 0

@@ -34,6 +34,79 @@ def log_debug_event(debug_data_list, year, step_name, variable, value, context="
     logging.debug(f"Year {year} | Step: {step_name} | Var: {variable} | Val: {event['Value']} | Context: {context}")
 
 
+def calculate_taxes(year, args, hmrc, my_employment, taxable_salary, gross_interest, taxable_pension_income, employee_contrib, employer_contrib, total_pension_contributions, dividends=0, debug_data=None):
+    """
+    Calculates all tax liabilities and net income for the year.
+    
+    Returns:
+        dict: Containing calculated tax values (taxable_interest, pension_allowance, 
+              total_taxable_income, income_tax, ni, net_income).
+    """
+    step = "4. Tax Calculation"
+    
+    # State Pension
+    state_pension_income = args.state_pension_amount if year >= args.state_pension_start_year else 0
+    if debug_data is not None:
+        log_debug_event(debug_data, year, step, "State Pension Income", state_pension_income)
+
+    # Taxable Interest
+    income_estimate_for_psa = taxable_salary + gross_interest + taxable_pension_income
+    taxable_interest = hmrc.taxable_interest(
+        taxable_income=income_estimate_for_psa, gross_interest=gross_interest
+    )
+    if debug_data is not None:
+        log_debug_event(debug_data, year, step, "Taxable Interest (After PSA)", taxable_interest)
+
+    # Pension Allowance
+    income_for_allowance_check = taxable_salary + taxable_interest + state_pension_income
+    pension_allowance = hmrc.pension_allowance(
+        taxable_income_post_pension=income_for_allowance_check,
+        individual_pension_contribution=employee_contrib,
+        employer_contribution=employer_contrib
+    )
+    if debug_data is not None:
+        log_debug_event(debug_data, year, step, "Pension Annual Allowance", pension_allowance)
+        
+    pension_pay_over_allowance = max(0, total_pension_contributions - pension_allowance)
+    if debug_data is not None:
+        log_debug_event(debug_data, year, step, "Pension Contributions Over Allowance", pension_pay_over_allowance)
+
+    # Total Taxable Income
+    total_taxable_income = (taxable_salary + taxable_interest + pension_pay_over_allowance
+                            + taxable_pension_income + dividends + state_pension_income)
+    if debug_data is not None:
+        log_debug_event(debug_data, year, step, "Total Taxable Income", total_taxable_income)
+
+    # Income Tax
+    income_tax_due = hmrc.calculate_uk_income_tax(total_taxable_income)
+    if debug_data is not None:
+        log_debug_event(debug_data, year, step, "Income Tax Due", income_tax_due)
+    assert income_tax_due >= 0, f"Year {year}: Negative Income Tax ({income_tax_due})"
+
+    # National Insurance
+    gross_salary_for_ni = my_employment.get_gross_salary(year)
+    ni_due = hmrc.calculate_uk_national_insurance(gross_salary_for_ni)
+    if debug_data is not None:
+        log_debug_event(debug_data, year, step, "National Insurance Due", ni_due)
+    assert ni_due >= 0, f"Year {year}: Negative NI ({ni_due})"
+
+    # Net Income
+    income_after_tax = (taxable_salary + taxable_pension_income + state_pension_income - income_tax_due - ni_due)
+    if debug_data is not None:
+        log_debug_event(debug_data, year, step, "Net Income (Salary+Pension+State-Tax-NI)", income_after_tax)
+
+    return {
+        "taxable_interest": taxable_interest,
+        "pension_allowance": pension_allowance,
+        "pension_pay_over_allowance": pension_pay_over_allowance,
+        "total_taxable_income": total_taxable_income,
+        "income_tax_due": income_tax_due,
+        "ni_due": ni_due,
+        "state_pension_income": state_pension_income,
+        "income_after_tax": income_after_tax
+    }
+
+
 def simulate_a_life(args):
     """
     Runs the financial life simulation year by year with detailed logging and assertions.
@@ -278,56 +351,27 @@ def simulate_a_life(args):
         log_debug_event(debug_data, year, step, "Taxable Pension Income", taxable_pension_income)
 
 
-        # --- Calculate Taxable Interest (using estimate) ---
-        step = "4a. Taxable Interest Calc"
-        income_estimate_for_psa = taxable_salary + gross_interest + taxable_pension_income
-        log_debug_event(debug_data, year, step, "Income Estimate for PSA", income_estimate_for_psa, f"Salary={taxable_salary:.0f}, GrossInterest={gross_interest:.0f}, TaxPension={taxable_pension_income:.0f}")
-        taxable_interest = hmrc.taxable_interest(
-            taxable_income=income_estimate_for_psa, gross_interest=gross_interest
+        # --- 4. Tax Calculation Phase ---
+        tax_results = calculate_taxes(
+            year, args, hmrc, my_employment,
+            taxable_salary, gross_interest, taxable_pension_income,
+            employee_contrib, employer_contrib, total_pension_contributions,
+            dividends=dividends, debug_data=debug_data
         )
-        log_debug_event(debug_data, year, step, "Taxable Interest (After PSA)", taxable_interest)
-
-        # --- 4b. Main Tax Calculation Phase ---
-        step = "4b. Main Tax Calc"
         
-        # State Pension
-        state_pension_income = args.state_pension_amount if year >= args.state_pension_start_year else 0
-        log_debug_event(debug_data, year, step, "State Pension Income", state_pension_income)
-
-        # Calculate Pension Allowance
-        income_for_allowance_check = taxable_salary + taxable_interest + state_pension_income # Using taxable interest + state pension here
-        log_debug_event(debug_data, year, step, "Income for Pension Allowance Check", income_for_allowance_check)
-        pension_allowance = hmrc.pension_allowance(
-            taxable_income_post_pension=income_for_allowance_check,
-            individual_pension_contribution=employee_contrib,
-            employer_contribution=employer_contrib
-        )
-        log_debug_event(debug_data, year, step, "Pension Annual Allowance", pension_allowance)
-        pension_pay_over_allowance = max(0, total_pension_contributions - pension_allowance)
-        log_debug_event(debug_data, year, step, "Pension Contributions Over Allowance", pension_pay_over_allowance)
-
-        # Calculate Total Taxable Income
-        total_taxable_income = (taxable_salary + taxable_interest + pension_pay_over_allowance
-                                + taxable_pension_income + dividends + state_pension_income)
-        log_debug_event(debug_data, year, step, "Total Taxable Income", total_taxable_income)
-
-        # Calculate Income Tax
-        income_tax_due = hmrc.calculate_uk_income_tax(total_taxable_income)
-        log_debug_event(debug_data, year, step, "Income Tax Due", income_tax_due)
-        assert income_tax_due >= 0, f"Year {year}: Negative Income Tax ({income_tax_due})"
-
-        # Calculate National Insurance
-        gross_salary_for_ni = my_employment.get_gross_salary(year)
-        ni_due = hmrc.calculate_uk_national_insurance(gross_salary_for_ni)
-        log_debug_event(debug_data, year, step, "National Insurance Due", ni_due)
-        assert ni_due >= 0, f"Year {year}: Negative NI ({ni_due})"
-
-        # Calculate Net Income to Add to Cash
-        # Note: State pension is added here. It is taxable but paid gross. Tax is deducted from the total liability above.
-        income_after_tax = (taxable_salary + taxable_pension_income + state_pension_income - income_tax_due - ni_due)
-        log_debug_event(debug_data, year, step, "Net Income (Salary+Pension+State-Tax-NI)", income_after_tax)
+        # Unpack results
+        taxable_interest = tax_results["taxable_interest"]
+        pension_allowance = tax_results["pension_allowance"]
+        pension_pay_over_allowance = tax_results["pension_pay_over_allowance"]
+        total_taxable_income = tax_results["total_taxable_income"]
+        income_tax_due = tax_results["income_tax_due"]
+        ni_due = tax_results["ni_due"]
+        state_pension_income = tax_results["state_pension_income"]
+        income_after_tax = tax_results["income_after_tax"]
+        
+        # Add Net Income to Cash
         filipe.put_in_cash(income_after_tax)
-        log_debug_event(debug_data, year, step, "Cash Add (Net Income)", income_after_tax)
+        log_debug_event(debug_data, year, "4. Tax Calculation", "Cash Add (Net Income)", income_after_tax)
 
         # --- 5. Spending Phase (Living Costs) ---
         step = "5. Living Costs"
@@ -368,7 +412,10 @@ def simulate_a_life(args):
                 amount_taken_from_gia, capital_gains = result
                 log_debug_event(debug_data, year, step, "GIA Withdrawal Actual", amount_taken_from_gia)
                 log_debug_event(debug_data, year, step, "Capital Gains Generated", capital_gains)
-                capital_gains_tax = hmrc.capital_gains_tax_due(capital_gains)
+                
+                # Pass total_taxable_income (calculated in Step 4b) to determine CGT rate
+                capital_gains_tax = hmrc.capital_gains_tax_due(capital_gains, total_taxable_income)
+                
                 log_debug_event(debug_data, year, step, "Capital Gains Tax Due", capital_gains_tax)
                 gia_extract_net = amount_taken_from_gia - capital_gains_tax
                 log_debug_event(debug_data, year, step, "GIA Withdrawal Net", gia_extract_net)

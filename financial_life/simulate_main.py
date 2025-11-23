@@ -15,50 +15,67 @@ import plotly.express as px
 import plotly.graph_objects as go
 from google.cloud import aiplatform, storage
 import numpy_financial as npf
+from joblib import Parallel, delayed # For parallel execution
 
 # Import the simulation function
 from .simulate_funs import simulate_a_life
 
+def run_single_monte_carlo_iteration(i, params, mean_return, std_dev, years):
+    """
+    Executes a single iteration of the Monte Carlo simulation.
+    This function is designed to be pickled and run in parallel.
+    """
+    # 1. Generate Scenario
+    # Generate random returns for each year
+    # Note: Setting seed per process might be needed for reproducibility if desired, 
+    # but numpy's random state in parallel jobs usually handles this well enough for MC.
+    random_returns = np.random.normal(mean_return, std_dev, len(years))
+    market_returns_map = {year: r for year, r in zip(years, random_returns)}
+    
+    # Create a deep copy of params to ensure thread/process safety
+    scenario_params = copy.deepcopy(params)
+    scenario_params.market_returns_map = market_returns_map
+    scenario_params.file_name = f"{params.file_name}_run_{i}"
+    
+    try:
+        metric, df, _ = simulate_a_life(scenario_params)
+        
+        # 3. Collect Data
+        # We only keep key columns to save memory
+        if df is not None:
+            subset = df[['Total Assets', 'Cash', 'Utility Value']].copy()
+            subset['Run'] = i
+            subset['Year'] = subset.index
+            return metric, subset
+    except Exception as e:
+        logging.error(f"Monte Carlo Run {i} failed: {e}")
+        return None, None
+
 def run_monte_carlo(params):
     """
-    Runs Monte Carlo simulations and aggregates results.
+    Runs Monte Carlo simulations in parallel and aggregates results.
     """
     logging.info(f"Starting Monte Carlo Simulation with {params.monte_carlo_sims} runs.")
-    
-    all_results = []
-    metrics = []
     
     # Base mean return (using GIA growth rate as proxy for market mean)
     mean_return = params.GIA_growth_rate
     std_dev = params.investment_volatility
-    
     years = range(params.start_year, params.final_year + 1)
     
-    for i in range(params.monte_carlo_sims):
-        # 1. Generate Scenario
-        # Generate random returns for each year
-        random_returns = np.random.normal(mean_return, std_dev, len(years))
-        market_returns_map = {year: r for year, r in zip(years, random_returns)}
-        
-        # Create a copy of params to modify
-        scenario_params = copy.copy(params)
-        scenario_params.market_returns_map = market_returns_map
-        scenario_params.file_name = f"{params.file_name}_run_{i}"
-        
-        # 2. Run Simulation
-        try:
-            metric, df, _ = simulate_a_life(scenario_params)
-            
-            # 3. Collect Data
-            # We only keep key columns to save memory
-            if df is not None:
-                subset = df[['Total Assets', 'Cash', 'Utility Value']].copy()
-                subset['Run'] = i
-                subset['Year'] = subset.index
-                all_results.append(subset)
-                metrics.append(metric)
-        except Exception as e:
-            logging.error(f"Monte Carlo Run {i} failed: {e}")
+    # Execute in parallel using joblib
+    # n_jobs=-1 uses all available cores
+    results = Parallel(n_jobs=-1)(
+        delayed(run_single_monte_carlo_iteration)(i, params, mean_return, std_dev, years)
+        for i in range(params.monte_carlo_sims)
+    )
+    
+    all_results = []
+    metrics = []
+    
+    for metric, df_subset in results:
+        if df_subset is not None:
+            metrics.append(metric)
+            all_results.append(df_subset)
 
     # 4. Aggregation & Visualization
     if not all_results:
@@ -302,7 +319,7 @@ def main():
     parser.add_argument("--save_debug_data", action='store_true', help="Save the detailed debug DataFrame to GCS.")
 
     # --- One-Off Expenses ---
-    parser.add_argument("--one_off_expenses", type=str, default="{}", help="JSON string mapping years to one-off expense amounts (e.g., '{\"2030\": 50000}').")
+    parser.add_argument("--one_off_expenses", type=str, default="{}", help='JSON string mapping years to one-off expense amounts (e.g., \'{"2030": 50000}\').')
 
     args = parser.parse_args()
 

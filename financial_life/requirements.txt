@@ -5,3 +5,4 @@ numpy
 numpy-financial
 google-cloud-aiplatform
 streamlit
+joblib
