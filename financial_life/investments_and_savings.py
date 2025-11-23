@@ -8,11 +8,15 @@ class InvestmentAccountBase:
         self.asset_value = float(initial_value)
         self.growth_rate = float(growth_rate)
 
-    def grow_per_year(self):
+    def grow_per_year(self, growth_rate_override=None):
         """
         Applies the annual growth rate to the asset value.
+        
+        Args:
+            growth_rate_override (float, optional): If provided, use this rate instead of the instance's fixed growth_rate.
         """
-        self.asset_value *= (1 + self.growth_rate)
+        rate = growth_rate_override if growth_rate_override is not None else self.growth_rate
+        self.asset_value *= (1 + rate)
 
     def put_money(self, amount):
         """
@@ -221,17 +225,22 @@ class GeneralInvestmentAccount:
 
         return actual_amount_removed, max(0.0, capital_gains) # Ensure gains aren't negative
 
-    def grow_per_year(self):
+    def grow_per_year(self, growth_rate_override=None):
         """
         Applies annual growth to the unit price and updates asset value.
+        
+        Args:
+            growth_rate_override (float, optional): If provided, use this rate instead of the instance's fixed growth_rate.
         """
+        rate = growth_rate_override if growth_rate_override is not None else self.growth_rate
+        
         # Only grow if there are units
         if self.units > 0:
-            self.current_unit_price *= (1 + self.growth_rate)
+            self.current_unit_price *= (1 + rate)
             self.asset_value = self.units * self.current_unit_price
         else:
             # If no units, value should be zero, current_unit_price can still grow
-            self.current_unit_price *= (1 + self.growth_rate) # Price can grow even with no units
+            self.current_unit_price *= (1 + rate) # Price can grow even with no units
             self.asset_value = 0.0
 
 

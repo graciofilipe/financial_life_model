@@ -5,9 +5,11 @@ import os
 from datetime import datetime
 import math # For isnan check
 import logging # Import logging module
+import copy # For deepcopying params
 
 # Third-party imports
 import pandas as pd
+import numpy as np
 import plotly.express as px
 # Import graph_objects for potentially more control later if needed
 import plotly.graph_objects as go
@@ -16,6 +18,83 @@ import numpy_financial as npf
 
 # Import the simulation function
 from .simulate_funs import simulate_a_life
+
+def run_monte_carlo(params):
+    """
+    Runs Monte Carlo simulations and aggregates results.
+    """
+    logging.info(f"Starting Monte Carlo Simulation with {params.monte_carlo_sims} runs.")
+    
+    all_results = []
+    metrics = []
+    
+    # Base mean return (using GIA growth rate as proxy for market mean)
+    mean_return = params.GIA_growth_rate
+    std_dev = params.investment_volatility
+    
+    years = range(params.start_year, params.final_year + 1)
+    
+    for i in range(params.monte_carlo_sims):
+        # 1. Generate Scenario
+        # Generate random returns for each year
+        random_returns = np.random.normal(mean_return, std_dev, len(years))
+        market_returns_map = {year: r for year, r in zip(years, random_returns)}
+        
+        # Create a copy of params to modify
+        scenario_params = copy.copy(params)
+        scenario_params.market_returns_map = market_returns_map
+        scenario_params.file_name = f"{params.file_name}_run_{i}"
+        
+        # 2. Run Simulation
+        try:
+            metric, df, _ = simulate_a_life(scenario_params)
+            
+            # 3. Collect Data
+            # We only keep key columns to save memory
+            if df is not None:
+                subset = df[['Total Assets', 'Cash']].copy()
+                subset['Run'] = i
+                subset['Year'] = subset.index
+                all_results.append(subset)
+                metrics.append(metric)
+        except Exception as e:
+            logging.error(f"Monte Carlo Run {i} failed: {e}")
+
+    # 4. Aggregation & Visualization
+    if not all_results:
+        logging.error("No successful Monte Carlo runs.")
+        return 0, None, {}, None
+
+    combined_df = pd.concat(all_results)
+    avg_metric = np.mean(metrics)
+    
+    # Calculate Percentiles for Total Assets
+    stats_df = combined_df.groupby('Year')['Total Assets'].quantile([0.1, 0.5, 0.9]).unstack()
+    stats_df.columns = ['10th Percentile', 'Median', '90th Percentile']
+    
+    # Create Spaghetti Plot / Fan Chart
+    plots = {}
+    
+    # Fan Chart
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=stats_df.index, y=stats_df['90th Percentile'], mode='lines', line=dict(width=0), showlegend=False, name='90th'))
+    fig.add_trace(go.Scatter(x=stats_df.index, y=stats_df['10th Percentile'], mode='lines', fill='tonexty', line=dict(width=0), fillcolor='rgba(0,100,80,0.2)', name='10th-90th Percentile'))
+    fig.add_trace(go.Scatter(x=stats_df.index, y=stats_df['Median'], mode='lines', line=dict(color='rgb(0,100,80)'), name='Median Outcome'))
+    fig.update_layout(title="Monte Carlo: Total Assets Projection (Cone of Uncertainty)", xaxis_title="Year", yaxis_title="Total Assets (£)")
+    plots['Monte_Carlo_Assets'] = fig
+    
+    # Probability of Success (Cash > 0)
+    # Count runs where Min(Cash) >= 0
+    success_count = 0
+    for i in range(params.monte_carlo_sims):
+        run_data = combined_df[combined_df['Run'] == i]
+        if run_data['Cash'].min() >= -1: # Allow small floating point tolerance
+            success_count += 1
+    success_rate = (success_count / params.monte_carlo_sims) * 100
+    logging.info(f"Monte Carlo Success Rate: {success_rate:.1f}%")
+    
+    # Return Stats DataFrame as the main result
+    return avg_metric, stats_df, plots, None # No debug data for MC to save space
 
 
 # --- Refactored Simulation Logic ---
@@ -37,11 +116,31 @@ def run_simulation_and_get_results(params):
     """
     logging.info("--- Entering run_simulation_and_get_results ---")
 
-    # GIA_initial_average_buy_price is now handled within the GeneralInvestmentAccount class constructor.
-    # The value from params.GIA_initial_average_buy_price (which could be None if not set by user)
-    # will be passed directly to the constructor.
+    # --- Calculate default GIA initial average buy price if needed ---
+    # Modify params directly as it's an object (like args)
+    # Requires 'math' import within this scope or globally
+    if not hasattr(params, 'GIA_initial_average_buy_price') or params.GIA_initial_average_buy_price is None:
+        if params.GIA_initial_units > 0 and params.GIA_capital >= 0:
+            params.GIA_initial_average_buy_price = params.GIA_capital / params.GIA_initial_units
+            logging.info(f"Calculated default GIA initial average buy price: {params.GIA_initial_average_buy_price:.4f}")
+        elif params.GIA_initial_units == 0 and params.GIA_capital == 0:
+             params.GIA_initial_average_buy_price = 0.0
+             logging.info("GIA starts empty, initial average buy price set to 0.")
+        else:
+             logging.warning(f"Inconsistent GIA initial state (Capital={params.GIA_capital}, Units={params.GIA_initial_units}) and no average buy price provided. Setting price to 0.")
+             params.GIA_initial_average_buy_price = 0.0
+
+    if hasattr(params, 'GIA_initial_average_buy_price') and params.GIA_initial_average_buy_price is not None and math.isnan(params.GIA_initial_average_buy_price):
+        logging.warning("Calculated GIA initial average buy price is NaN. Setting to 0.")
+        params.GIA_initial_average_buy_price = 0.0
+
 
     logging.info("Starting financial simulation within run_simulation_and_get_results...")
+    
+    # --- Check for Monte Carlo Mode ---
+    if hasattr(params, 'monte_carlo_sims') and params.monte_carlo_sims > 1:
+        return run_monte_carlo(params)
+
     # --- Run the simulation ---
     metric = None
     df = None
@@ -119,6 +218,10 @@ def main():
     parser.add_argument("--retirement_year", type=int, default=2055, help="Year of retirement.")
 
     parser.add_argument("--pension_lump_sum_spread_years", type=int, default=1, help="Number of years to spread the pension tax-free lump sum over (Phased Drawdown).")
+    
+    # --- Monte Carlo Arguments ---
+    parser.add_argument("--monte_carlo_sims", type=int, default=1, help="Number of Monte Carlo simulation runs. Default 1 (Deterministic).")
+    parser.add_argument("--investment_volatility", type=float, default=0.15, help="Standard Deviation of annual investment returns (e.g., 0.15 for 15%).")
 
     # --- Initial Capital Arguments ---
     parser.add_argument("--starting_cash", type=float, default=5000, help="Initial cash on hand.")

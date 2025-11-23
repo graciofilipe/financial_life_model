@@ -196,13 +196,22 @@ def simulate_a_life(args):
 
         # --- 2. Investment Growth Phase ---
         step = "2. Growth"
+        
+        # Determine growth rates for this year
+        # If a Monte Carlo map is provided, use the rate for this specific year.
+        # Otherwise, pass None to use the account's internal default rate.
+        current_year_market_rate = None
+        if hasattr(args, 'market_returns_map') and args.market_returns_map and year in args.market_returns_map:
+            current_year_market_rate = args.market_returns_map[year]
+            log_debug_event(debug_data, year, step, "Market Return Override", current_year_market_rate)
+
         log_debug_event(debug_data, year, step, "ISA Value (Pre-Growth)", my_ISA.asset_value)
-        my_ISA.grow_per_year()
+        my_ISA.grow_per_year(growth_rate_override=current_year_market_rate)
         log_debug_event(debug_data, year, step, "ISA Value (Post-Growth)", my_ISA.asset_value)
         assert my_ISA.asset_value >= -1e-9, f"Year {year}: ISA value negative ({my_ISA.asset_value})"
 
         log_debug_event(debug_data, year, step, "GIA Value (Pre-Growth)", my_gia.asset_value)
-        my_gia.grow_per_year()
+        my_gia.grow_per_year(growth_rate_override=current_year_market_rate)
         log_debug_event(debug_data, year, step, "GIA Value (Post-Growth)", my_gia.asset_value)
         log_debug_event(debug_data, year, step, "GIA Units", my_gia.units)
         log_debug_event(debug_data, year, step, "GIA Current Unit Price", my_gia.current_unit_price)
@@ -210,7 +219,7 @@ def simulate_a_life(args):
         assert my_gia.units >= -1e-9, f"Year {year}: GIA units negative ({my_gia.units})"
 
         log_debug_event(debug_data, year, step, "Pension Value (Pre-Growth)", my_pension.asset_value)
-        my_pension.grow_per_year()
+        my_pension.grow_per_year(growth_rate_override=current_year_market_rate)
         log_debug_event(debug_data, year, step, "Pension Value (Post-Growth)", my_pension.asset_value)
         assert my_pension.asset_value >= -1e-9, f"Year {year}: Pension value negative ({my_pension.asset_value})"
 
