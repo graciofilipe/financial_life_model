@@ -52,7 +52,7 @@ def run_monte_carlo(params):
             # 3. Collect Data
             # We only keep key columns to save memory
             if df is not None:
-                subset = df[['Total Assets', 'Cash']].copy()
+                subset = df[['Total Assets', 'Cash', 'Utility Value']].copy()
                 subset['Run'] = i
                 subset['Year'] = subset.index
                 all_results.append(subset)
@@ -72,16 +72,28 @@ def run_monte_carlo(params):
     stats_df = combined_df.groupby('Year')['Total Assets'].quantile([0.1, 0.5, 0.9]).unstack()
     stats_df.columns = ['10th Percentile', 'Median', '90th Percentile']
     
+    # Calculate Percentiles for Utility Value
+    stats_df_utility = combined_df.groupby('Year')['Utility Value'].quantile([0.1, 0.5, 0.9]).unstack()
+    stats_df_utility.columns = ['10th Percentile', 'Median', '90th Percentile']
+    
     # Create Spaghetti Plot / Fan Chart
     plots = {}
     
-    # Fan Chart
+    # Fan Chart - Assets
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=stats_df.index, y=stats_df['90th Percentile'], mode='lines', line=dict(width=0), showlegend=False, name='90th'))
     fig.add_trace(go.Scatter(x=stats_df.index, y=stats_df['10th Percentile'], mode='lines', fill='tonexty', line=dict(width=0), fillcolor='rgba(0,100,80,0.2)', name='10th-90th Percentile'))
     fig.add_trace(go.Scatter(x=stats_df.index, y=stats_df['Median'], mode='lines', line=dict(color='rgb(0,100,80)'), name='Median Outcome'))
     fig.update_layout(title="Monte Carlo: Total Assets Projection (Cone of Uncertainty)", xaxis_title="Year", yaxis_title="Total Assets (£)")
     plots['Monte_Carlo_Assets'] = fig
+    
+    # Fan Chart - Utility
+    fig_ut = go.Figure()
+    fig_ut.add_trace(go.Scatter(x=stats_df_utility.index, y=stats_df_utility['90th Percentile'], mode='lines', line=dict(width=0), showlegend=False, name='90th'))
+    fig_ut.add_trace(go.Scatter(x=stats_df_utility.index, y=stats_df_utility['10th Percentile'], mode='lines', fill='tonexty', line=dict(width=0), fillcolor='rgba(50,0,80,0.2)', name='10th-90th Percentile'))
+    fig_ut.add_trace(go.Scatter(x=stats_df_utility.index, y=stats_df_utility['Median'], mode='lines', line=dict(color='rgb(50,0,80)'), name='Median Utility'))
+    fig_ut.update_layout(title="Monte Carlo: Utility Value Projection (Cone of Uncertainty)", xaxis_title="Year", yaxis_title="Utility Value")
+    plots['Monte_Carlo_Utility'] = fig_ut
     
     # Probability of Success (Cash > 0)
     # Count runs where Min(Cash) >= 0

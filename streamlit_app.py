@@ -233,6 +233,8 @@ if submitted:
                     st.subheader("Monte Carlo Analysis")
                     if plots and 'Monte_Carlo_Assets' in plots:
                         st.plotly_chart(plots['Monte_Carlo_Assets'], use_container_width=True)
+                    if plots and 'Monte_Carlo_Utility' in plots:
+                        st.plotly_chart(plots['Monte_Carlo_Utility'], use_container_width=True)
                     
                     st.subheader("Simulation Statistics (Total Assets)")
                     st.dataframe(df)
