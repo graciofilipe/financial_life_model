@@ -80,7 +80,6 @@ def get_scenario_inputs(prefix, default_overrides={}):
     st.caption("Strategy & Utility")
     buffer_mult = st.number_input("Buffer Multiplier", value=1.2, step=0.1, key=k("buffer"))
     util_baseline = st.number_input("Utility Baseline", value=30000.0, key=k("util_base"))
-    fail_penalty = st.number_input("Failure Penalty Exponent", value=2.0, step=0.1, format="%.1f", help="Exponent for unpaid costs penalty (1.0=Linear, 2.0=Quadratic).", key=k("fail_pen"))
     stress_crash = st.slider("Crash at Retirement (%)", 0.0, 0.5, 0.0, 0.05, key=k("crash"))
 
     return {
@@ -106,7 +105,6 @@ def get_scenario_inputs(prefix, default_overrides={}):
         "buffer_multiplier": buffer_mult,
         "utility_baseline": util_baseline,
         "stress_test_market_crash_pct": stress_crash,
-        "failure_penalty_exponent": fail_penalty,
         # --- Fixed/Hidden/Advanced Defaults (to simplify UI for now) ---
         "fixed_interest_rate": 0.02,
         "NSI_interest_rate": 0.02,
@@ -139,6 +137,7 @@ with st.sidebar.form(key='main_form'):
     # Monte Carlo
     mc_sims = st.slider("Monte Carlo Sims", 1, 50, 1, help="Runs multiple probabilistic scenarios")
     volatility = st.number_input("Investment Volatility (Std Dev)", value=0.15, step=0.01, format="%.2f", help="Annual standard deviation (0.15 = 15%)")
+    in_failure_penalty_exponent = st.number_input("Failure Penalty Exponent", value=2.0, step=0.1, format="%.1f", help="Exponent for unpaid costs penalty (1.0=Linear, 2.0=Quadratic). Shared by both scenarios.")
     
     st.markdown("---")
     st.header("Scenario Config")
@@ -176,6 +175,7 @@ if submit_btn:
         "retirement_year": int(ret_year),
         "monte_carlo_sims": mc_sims,
         "investment_volatility": volatility,
+        "failure_penalty_exponent": in_failure_penalty_exponent,
         "file_name": "sim", # Base name
         "log_level": "INFO",
         "save_debug_data": False
