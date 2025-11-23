@@ -109,6 +109,7 @@ with st.sidebar.form(key='simulation_params'):
     in_non_linear_utility = st.number_input("Non-Linear Utility Exponent", value=0.99, format="%.4f", step=0.01, help="Exponent for calculating actual utility from spending (e.g., 0.5 for sqrt).")
     in_utility_discount_rate = st.number_input("Utility Discount Rate (%/Year)", value=0.001, format="%.4f", step=0.0001, help=rate_help_text + " for NPV calculation.")
     in_volatility_penalty = st.number_input("Volatility Penalty", value=100000.0, format="%.0f", step=1000.0, help="Penalty factor for utility volatility (stdev/mean) in the final metric.")
+    in_failure_penalty_exponent = st.number_input("Failure Penalty Exponent", value=2.0, format="%.1f", step=0.1, help="Exponent for unpaid costs penalty (1.0=Linear, 2.0=Quadratic). Lower reduces skew from bankruptcy.")
 
     # --- Stress Testing ---
     st.subheader("Stress Testing")
@@ -196,6 +197,7 @@ if submitted:
             "non_linear_utility": in_non_linear_utility,
             "utility_discount_rate": in_utility_discount_rate,
             "volatility_penalty": in_volatility_penalty,
+            "failure_penalty_exponent": in_failure_penalty_exponent,
             "stress_test_market_crash_pct": in_stress_test_market_crash_pct,
             "monte_carlo_sims": in_monte_carlo_sims,
             "investment_volatility": in_investment_volatility,

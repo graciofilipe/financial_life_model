@@ -428,11 +428,11 @@ def simulate_a_life(args):
         else:
              # Apply penalty if living costs remain unpaid
              if unpaid_living_costs > 0:
-                 utility_penalty = -(unpaid_living_costs**2)
+                 utility_penalty = -(unpaid_living_costs**args.failure_penalty_exponent)
                  filipe.utility.append(utility_penalty)
                  actual_utility_value = utility_penalty
                  utility_i_can_afford = utility_penalty # Reflects negative outcome
-                 log_debug_event(debug_data, year, step, "Utility Penalty (Unpaid Living Costs)", utility_penalty)
+                 log_debug_event(debug_data, year, step, "Utility Penalty (Unpaid Living Costs)", utility_penalty, f"Exponent: {args.failure_penalty_exponent}")
              else:
                  filipe.utility.append(0) # Append 0 if no utility bought and no penalty
                  actual_utility_value = 0
@@ -567,7 +567,7 @@ def simulate_a_life(args):
     if not final_utility_values:
          logging.warning("No utility values recorded during simulation.")
          total_ut, var_ut, std_ut, mean_ut, sigma_ut, discounted_utility = 0, 0, 0, 0, 0, 0
-         metric = -float('inf') # Penalize heavily
+         metric = -8888.888 # Penalize heavily
     else:
         total_ut = round(sum(final_utility_values))
         var_ut = np.var(final_utility_values)

@@ -270,6 +270,7 @@ def main():
     parser.add_argument("--non_linear_utility", type=float, default=0.99, help="Exponent for calculating actual utility from spending (e.g., 0.5 for sqrt).")
     parser.add_argument("--utility_discount_rate", type=float, default=0.001, help="Discount rate for calculating net present value of utility.")
     parser.add_argument("--volatility_penalty", type=float, default=100000, help="Penalty factor for utility volatility (stdev/mean) in the final metric.")
+    parser.add_argument("--failure_penalty_exponent", type=float, default=2.0, help="Exponent for penalizing unpaid living costs (e.g., 2.0 for quadratic penalty).")
 
     # --- Stress Testing ---
     parser.add_argument("--stress_test_market_crash_pct", type=float, default=0.0, help="Percentage drop in asset values in retirement year (0.0 to 1.0).")
