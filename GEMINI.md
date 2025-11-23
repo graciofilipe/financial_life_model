@@ -11,29 +11,32 @@ The project supports two modes of operation:
 
 ## Core Concepts
 
-*   **Utility Function:** Uses a non-linear utility function (`spending ^ exponent`, where `exponent < 1`, default `0.99`) to model diminishing marginal returns. The first £1000 spent contributes more to happiness than the £1000 spent after £50k.
+*   **Utility Function:** Uses a non-linear utility function (`spending ^ exponent`, where `exponent < 1`, default `0.99`) to model diminishing marginal returns. Users can also configure the **Failure Penalty Exponent** to control how harshly bankruptcy is penalized (Linear vs Quadratic).
+*   **Monte Carlo Simulation:** The engine can run hundreds of probabilistic scenarios with randomized investment returns (`Normal(mean, std_dev)`). This generates **"Cones of Uncertainty"** for both Total Assets and Utility Value, visualizing the range of possible outcomes rather than a single deterministic path.
+*   **Stress Testing:** Allows users to simulate specific adverse events, such as a **Market Crash** (e.g., -20% drop) exactly at the year of retirement (Sequence of Returns Risk).
+*   **Lifestyling:** Models changing spending needs in later life. Users can define a "Slow Down Year" (e.g., age 80) after which real-term living costs typically decrease ("Slow-Go" phase).
+*   **State Pension:** Fully integrates the UK State Pension as a guaranteed, taxable income stream starting at a configurable year.
 *   **Discounting:** Future utility is discounted (`utility_discount_rate`) to reflect time preference—happiness today is valued slightly higher than happiness in the distant future.
 *   **Volatility Penalty:** A specific metric (`sigma_ut`) penalizes fluctuations in spending. The model explicitly prefers a stable standard of living over a "boom and bust" lifecycle.
 *   **Real Values:** All monetary inputs and growth rates are **Real** (inflation-adjusted). A 0% inflation baseline is assumed, meaning "3% growth" represents 3% real growth in purchasing power.
-*   **Optimization:** The user "tunes" three key parameters (`baseline_utility`, `utility_linear_rate`, `utility_exp_rate`) to define a spending curve. The simulation then tests this curve against realistic financial constraints (taxes, asset yields) to see if it is sustainable and optimal.
 
 ## Tech Stack
 *   **Language:** Python 3.12+
 *   **Frontend:** Streamlit
 *   **Data Analysis:** Pandas, NumPy, NumPy-Financial
-*   **Visualization:** Plotly
+*   **Visualization:** Plotly (Fan Charts for Monte Carlo)
 *   **Cloud Integration:** Google Cloud Storage (via `google-cloud-storage`)
 *   **Containerization:** Docker
 
 ## Key Files & Directories
 
-*   `streamlit_app.py`: The interactive frontend. Allows users to adjust "Utility Parameters" (spending curve) and "Financial Assumptions" to visualize the impact on their lifetime utility metric.
+*   `streamlit_app.py`: The interactive frontend. Includes controls for Monte Carlo settings (Sims, Volatility), Stress Testing (Crash %), State Pension, and advanced Utility parameters.
 *   `financial_life/`: Core simulation package.
-    *   `simulate_main.py`: CLI entry point. orchestrates the simulation and metric calculation.
-    *   `simulate_funs.py`: The main simulation loop (`simulate_a_life`). It calculates year-by-year cash flows, applies the utility function, and enforces the "Buffer" strategy.
-    *   `human.py`: Represents the agent (`Human`), tracking cash, accumulating utility, and managing living costs.
+    *   `simulate_main.py`: CLI entry point and **Monte Carlo Engine**. It orchestrates single or multiple runs and aggregates probabilistic results.
+    *   `simulate_funs.py`: The main simulation loop (`simulate_a_life`). It calculates year-by-year cash flows, applies the utility function, handles gains harvesting, and enforces the "Buffer" strategy.
+    *   `human.py`: Represents the agent (`Human`), tracking cash, accumulating utility, and managing living costs (including One-Off Expenses and Lifestyling).
     *   `uk_gov.py`: Encapsulates UK government rules (Income Tax bands, NI, Capital Gains, **Tapered Annual Allowance** for pensions). This ensures the optimization is grounded in legal reality.
-    *   `investments_and_savings.py`: Logic for asset classes (ISA, GIA, Pension, Fixed Interest) and their specific growth/tax behaviors.
+    *   `investments_and_savings.py`: Logic for asset classes (ISA, GIA, Pension, Fixed Interest) and their specific growth/tax behaviors. Supports annual return overrides for stochastic simulations.
     *   `setup_world.py`: Configuration for the economic environment.
 *   `Dockerfile`: Defines the container image for deployment.
 
@@ -60,7 +63,7 @@ The app will be accessible at `http://localhost:8501`.
 To run the simulation without the UI (requires GCS credentials):
 
 ```bash
-python financial_life/simulate_main.py --bucket_name=<your-gcs-bucket> [options]
+python financial_life/simulate_main.py --bucket_name=<your-gcs-bucket> --monte_carlo_sims=100 [options]
 ```
 Use `python financial_life/simulate_main.py --help` to see all available parameters.
 

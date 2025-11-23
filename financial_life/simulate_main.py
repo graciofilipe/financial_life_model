@@ -69,28 +69,38 @@ def run_monte_carlo(params):
     avg_metric = np.mean(metrics)
     
     # Calculate Percentiles for Total Assets
-    stats_df = combined_df.groupby('Year')['Total Assets'].quantile([0.1, 0.5, 0.9]).unstack()
-    stats_df.columns = ['10th Percentile', 'Median', '90th Percentile']
+    stats_df = combined_df.groupby('Year')['Total Assets'].quantile([0.1, 0.25, 0.5, 0.75, 0.9]).unstack()
+    stats_df.columns = ['10th', '25th', 'Median', '75th', '90th']
     
     # Calculate Percentiles for Utility Value
-    stats_df_utility = combined_df.groupby('Year')['Utility Value'].quantile([0.1, 0.5, 0.9]).unstack()
-    stats_df_utility.columns = ['10th Percentile', 'Median', '90th Percentile']
+    stats_df_utility = combined_df.groupby('Year')['Utility Value'].quantile([0.1, 0.25, 0.5, 0.75, 0.9]).unstack()
+    stats_df_utility.columns = ['10th', '25th', 'Median', '75th', '90th']
     
     # Create Spaghetti Plot / Fan Chart
     plots = {}
     
     # Fan Chart - Assets
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=stats_df.index, y=stats_df['90th Percentile'], mode='lines', line=dict(width=0), showlegend=False, name='90th'))
-    fig.add_trace(go.Scatter(x=stats_df.index, y=stats_df['10th Percentile'], mode='lines', fill='tonexty', line=dict(width=0), fillcolor='rgba(0,100,80,0.2)', name='10th-90th Percentile'))
+    # Outer Cone (10th-90th)
+    fig.add_trace(go.Scatter(x=stats_df.index, y=stats_df['10th'], mode='lines', line=dict(width=0), showlegend=False, name='10th'))
+    fig.add_trace(go.Scatter(x=stats_df.index, y=stats_df['90th'], mode='lines', fill='tonexty', line=dict(width=0), fillcolor='rgba(0,100,80,0.1)', name='10th-90th Percentile'))
+    # Inner Cone (25th-75th)
+    fig.add_trace(go.Scatter(x=stats_df.index, y=stats_df['25th'], mode='lines', line=dict(width=0), showlegend=False, name='25th'))
+    fig.add_trace(go.Scatter(x=stats_df.index, y=stats_df['75th'], mode='lines', fill='tonexty', line=dict(width=0), fillcolor='rgba(0,100,80,0.2)', name='25th-75th Percentile'))
+    # Median
     fig.add_trace(go.Scatter(x=stats_df.index, y=stats_df['Median'], mode='lines', line=dict(color='rgb(0,100,80)'), name='Median Outcome'))
     fig.update_layout(title="Monte Carlo: Total Assets Projection (Cone of Uncertainty)", xaxis_title="Year", yaxis_title="Total Assets (£)")
     plots['Monte_Carlo_Assets'] = fig
     
     # Fan Chart - Utility
     fig_ut = go.Figure()
-    fig_ut.add_trace(go.Scatter(x=stats_df_utility.index, y=stats_df_utility['90th Percentile'], mode='lines', line=dict(width=0), showlegend=False, name='90th'))
-    fig_ut.add_trace(go.Scatter(x=stats_df_utility.index, y=stats_df_utility['10th Percentile'], mode='lines', fill='tonexty', line=dict(width=0), fillcolor='rgba(50,0,80,0.2)', name='10th-90th Percentile'))
+    # Outer Cone (10th-90th)
+    fig_ut.add_trace(go.Scatter(x=stats_df_utility.index, y=stats_df_utility['10th'], mode='lines', line=dict(width=0), showlegend=False, name='10th'))
+    fig_ut.add_trace(go.Scatter(x=stats_df_utility.index, y=stats_df_utility['90th'], mode='lines', fill='tonexty', line=dict(width=0), fillcolor='rgba(50,0,80,0.1)', name='10th-90th Percentile'))
+    # Inner Cone (25th-75th)
+    fig_ut.add_trace(go.Scatter(x=stats_df_utility.index, y=stats_df_utility['25th'], mode='lines', line=dict(width=0), showlegend=False, name='25th'))
+    fig_ut.add_trace(go.Scatter(x=stats_df_utility.index, y=stats_df_utility['75th'], mode='lines', fill='tonexty', line=dict(width=0), fillcolor='rgba(50,0,80,0.2)', name='25th-75th Percentile'))
+    # Median
     fig_ut.add_trace(go.Scatter(x=stats_df_utility.index, y=stats_df_utility['Median'], mode='lines', line=dict(color='rgb(50,0,80)'), name='Median Utility'))
     fig_ut.update_layout(title="Monte Carlo: Utility Value Projection (Cone of Uncertainty)", xaxis_title="Year", yaxis_title="Utility Value")
     plots['Monte_Carlo_Utility'] = fig_ut
