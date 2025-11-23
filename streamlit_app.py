@@ -120,9 +120,7 @@ def get_scenario_inputs(prefix, default_overrides={}):
         "non_linear_utility": 0.99,
         "utility_discount_rate": 0.001,
         "volatility_penalty": 100000.0,
-        "failure_penalty_exponent": 2.0,
-        "monte_carlo_sims": 1, # Controlled globally for now
-        "investment_volatility": 0.15
+        "failure_penalty_exponent": 2.0
     }
 
 # --- Sidebar Layout ---
@@ -139,6 +137,7 @@ with st.sidebar.form(key='main_form'):
     
     # Monte Carlo
     mc_sims = st.slider("Monte Carlo Sims", 1, 50, 1, help="Runs multiple probabilistic scenarios")
+    volatility = st.number_input("Investment Volatility (Std Dev)", value=0.15, step=0.01, format="%.2f", help="Annual standard deviation (0.15 = 15%)")
     
     st.markdown("---")
     st.header("Scenario Config")
@@ -175,6 +174,7 @@ if submit_btn:
         "final_year": int(final_year),
         "retirement_year": int(ret_year),
         "monte_carlo_sims": mc_sims,
+        "investment_volatility": volatility,
         "file_name": "sim", # Base name
         "log_level": "INFO",
         "save_debug_data": False
