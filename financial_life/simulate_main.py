@@ -94,15 +94,15 @@ def run_monte_carlo(params):
     stats_df_utility.columns = ['Utility_10th', 'Utility_25th', 'Median', 'Utility_75th', 'Utility_90th']
     
     # Calculate Median for Cash (for consistency with overlay plots)
-    stats_df_cash = combined_df.groupby('Year')['Cash'].quantile(0.5).unstack()
-    stats_df_cash.columns = ['Median'] # Series -> DataFrame
+    # quantile(0.5) returns a Series indexed by Year. No need to unstack.
+    stats_df_cash = combined_df.groupby('Year')['Cash'].quantile(0.5)
 
     # Create a "Summary DataFrame" that looks like a single run result for compatibility
     # We use the Medians as the representative values
     summary_df = pd.DataFrame(index=stats_df.index)
     summary_df['Total Assets'] = stats_df['Median']
     summary_df['Utility Value'] = stats_df_utility['Median']
-    summary_df['Cash'] = stats_df_cash['Median']
+    summary_df['Cash'] = stats_df_cash
     
     # Create Spaghetti Plot / Fan Chart
     plots = {}
