@@ -3,63 +3,69 @@ import math # Import math for isnan check
 
 
 # UNIT TESTING: Test year generation, correct application of rates, base year handling.
-def generate_living_costs(base_cost, base_year, rate_pre_retirement, rate_post_retirement, retirement_year, final_year, one_off_expenses=None):
+def generate_living_costs(base_cost, base_year, rate_pre_retirement, rate_post_retirement, retirement_year, final_year, one_off_expenses=None, slow_down_year=None, rate_post_slow_down=0.0):
     """
     Generates a dictionary of projected annual living costs based on provided rates and years,
-    incorporating one-off expenses.
+    incorporating one-off expenses and a potential 'slow down' phase in later life.
 
     Args:
         base_cost (float): The living cost in the base_year.
         base_year (int): The year corresponding to the base_cost.
-        rate_pre_retirement (float): Annual rate of living cost increase before retirement (e.g., 0.02 for 2%).
-        rate_post_retirement (float): Annual rate of living cost increase after retirement (e.g., 0.04 for 4%).
-        retirement_year (int): The year retirement occurs. Costs increase at the pre-retirement rate up to and including this year.
-        final_year (int): The final year of the simulation for which costs are calculated.
-        one_off_expenses (dict, optional): A dictionary mapping specific years (int) to additional cost amounts (float).
+        rate_pre_retirement (float): Annual rate of living cost increase before retirement.
+        rate_post_retirement (float): Annual rate of living cost increase after retirement (active phase).
+        retirement_year (int): The year retirement occurs.
+        final_year (int): The final year of the simulation.
+        one_off_expenses (dict, optional): Dictionary mapping specific years to additional costs.
+        slow_down_year (int, optional): Year when the 'slow down' phase begins (expenses change rate). 
+                                        If None, post-retirement rate applies until end.
+        rate_post_slow_down (float): Annual rate of living cost increase after the slow_down_year. 
+                                     Defaults to 0.0 (flat real terms).
 
     Returns:
         dict: A dictionary where keys are years (int) and values are projected living costs (float).
     """
-    r1 = 1 + rate_pre_retirement # Convert rate to multiplier
-    r2 = 1 + rate_post_retirement # Convert rate to multiplier
+    r1 = 1 + rate_pre_retirement
+    r2 = 1 + rate_post_retirement
+    r3 = 1 + rate_post_slow_down
 
-    # Costs increase at rate r1 until retirement year (inclusive)
-    # Uses the provided base_cost and base_year
-    start_year = base_year # Use the provided base_year
-    # The base_cost argument is used directly in the calculation below
-
-    # Calculate costs from base_year up to retirement_year
+    start_year = base_year
+    
+    # 1. Pre-Retirement Phase
     d1 = {year: base_cost * (r1)**(year - start_year) for year in range(start_year, retirement_year + 1)}
 
-    # Costs increase at rate r2 from the year after retirement
-    if retirement_year in d1: # Check if retirement happened within the calculated range
-        base_post_retirement_cost = d1[retirement_year]
-        d2 = {year: base_post_retirement_cost * (r2)**(year - retirement_year) for year in range(retirement_year + 1, final_year + 1)}
-    else: # Handle cases where retirement year might be before the start year (edge case)
-        # If retirement is before the cost calculation starts, apply post-retirement rate from the start
-        # This assumes costs still start being tracked from base_year
-        # A more robust approach might need a different base cost calculation
-        base_post_retirement_cost = base_cost * (r1)**(retirement_year - base_year) # Hypothetical cost at retirement
-        d2 = {year: base_post_retirement_cost * (r2)**(year - retirement_year) for year in range(base_year, final_year + 1)}
-        d1 = {} # No pre-retirement costs in this scenario within the tracked range
+    # 2. Post-Retirement Phase
+    current_cost = d1.get(retirement_year, base_cost * (r1)**(retirement_year - base_year))
+    
+    # Determine effective end of active retirement phase
+    if slow_down_year and slow_down_year > retirement_year:
+        active_retirement_end = min(slow_down_year, final_year)
+    else:
+        active_retirement_end = final_year
 
-    # Combine the two dictionaries
-    combined_costs = {**d1, **d2}
+    d2 = {}
+    for year in range(retirement_year + 1, active_retirement_end + 1):
+        current_cost *= r2
+        d2[year] = current_cost
+
+    # 3. Slow-Down Phase
+    d3 = {}
+    if slow_down_year and slow_down_year < final_year and slow_down_year >= retirement_year:
+        # current_cost is now at slow_down_year level
+        for year in range(active_retirement_end + 1, final_year + 1):
+            current_cost *= r3
+            d3[year] = current_cost
+
+    # Combine all phases
+    combined_costs = {**d1, **d2, **d3}
 
     # Add one-off expenses if provided
     if one_off_expenses:
         for year, amount in one_off_expenses.items():
-            # Ensure year key is integer for consistency
             year_int = int(year)
             if year_int in combined_costs:
                 combined_costs[year_int] += float(amount)
-            else:
-                # If the year is within the simulation range but somehow not in combined_costs (unlikely given range above),
-                # or if it falls outside, we might want to log it or ignore it. 
-                # Here we only add if it's in the valid range generated.
-                # If the user provides a year outside start-final, it's ignored.
-                 if start_year <= year_int <= final_year:
-                     combined_costs[year_int] = float(amount)
+            elif start_year <= year_int <= final_year:
+                 combined_costs[year_int] = float(amount)
 
     return combined_costs
 

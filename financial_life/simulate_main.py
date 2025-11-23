@@ -140,12 +140,18 @@ def main():
     parser.add_argument("--GIA_growth_rate", type=float, default=0.02, help="Annual growth rate for GIA investments.")
     parser.add_argument("--living_costs_rate_pre_retirement", type=float, default=0.02, help="Annual living costs growth rate before retirement (e.g., 0.02 for 2%).")
     parser.add_argument("--living_costs_rate_post_retirement", type=float, default=0.04, help="Annual living costs growth rate after retirement (e.g., 0.04 for 4%).")
+    parser.add_argument("--slow_down_year", type=int, default=None, help="Year when 'Slow Down' phase begins (expenses change rate).")
+    parser.add_argument("--living_costs_rate_post_slow_down", type=float, default=0.0, help="Annual living costs growth rate after slow down year (e.g., 0.0).")
     parser.add_argument("--salary_growth_rate", type=float, default=0.01, help="Annual gross salary growth rate (e.g., 0.01 for 1%).")
     parser.add_argument("--salary_growth_stop_year", type=int, default=None, help="Year after which salary growth stops (plateaus). If not set, grows until retirement.")
     parser.add_argument("--salary_post_plateau_growth_rate", type=float, default=0.0, help="Annual salary growth rate AFTER the stop year (e.g., -0.01 for 1% decline). Default 0.0.")
     # --- Base Value Arguments ---
     parser.add_argument("--base_living_cost", type=float, default=20000, help="Base living cost amount in the start year.")
     parser.add_argument("--base_salary", type=float, default=100000, help="Base gross salary amount in the year before the start year.")
+    
+    # --- State Pension Arguments ---
+    parser.add_argument("--state_pension_start_year", type=int, default=2058, help="Year when State Pension starts.")
+    parser.add_argument("--state_pension_amount", type=float, default=11502.0, help="Annual State Pension amount (current year values).")
 
     # --- Employment Arguments ---
     parser.add_argument("--employee_pension_contributions_pct", type=float, default=0.07, help="Employee pension contribution as a percentage of gross salary (e.g., 0.07 for 7%).")
@@ -161,6 +167,9 @@ def main():
     parser.add_argument("--non_linear_utility", type=float, default=0.99, help="Exponent for calculating actual utility from spending (e.g., 0.5 for sqrt).")
     parser.add_argument("--utility_discount_rate", type=float, default=0.001, help="Discount rate for calculating net present value of utility.")
     parser.add_argument("--volatility_penalty", type=float, default=100000, help="Penalty factor for utility volatility (stdev/mean) in the final metric.")
+
+    # --- Stress Testing ---
+    parser.add_argument("--stress_test_market_crash_pct", type=float, default=0.0, help="Percentage drop in asset values in retirement year (0.0 to 1.0).")
 
     # --- Troubleshooting Arguments ---
     parser.add_argument("--log_level", default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], help="Set the logging level for console output.")

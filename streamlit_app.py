@@ -66,6 +66,11 @@ with st.sidebar.form(key='simulation_params'):
     in_base_living_cost = st.number_input("Base Living Cost (Start Year)", value=20000.0, format="%.2f", help="Base living cost amount in the start year.")
     in_base_salary = st.number_input("Base Salary (Year before Start)", value=100000.0, format="%.2f", help="Base gross salary amount in the year before the start year.")
     
+    # --- State Pension ---
+    st.subheader("State Pension")
+    in_state_pension_start_year = st.number_input("State Pension Start Year", value=int(in_retirement_year) + 10, help="Year when State Pension starts (e.g., 2060).")
+    in_state_pension_amount = st.number_input("State Pension Amount (£/yr)", value=11502.0, format="%.2f", help="Annual State Pension amount.")
+
     # --- One-Off Expenses ---
     in_one_off_expenses_str = st.text_area("One-Off Expenses (JSON)", value="{}", help="Enter a JSON dictionary mapping years to amounts. E.g., {\"2030\": 50000, \"2040\": 20000}")
 
@@ -79,6 +84,8 @@ with st.sidebar.form(key='simulation_params'):
     in_GIA_growth_rate = st.number_input("GIA Growth Rate", value=0.02, format="%.4f", step=0.001, help=rate_help_text)
     in_living_costs_rate_pre_retirement = st.number_input("Living Costs Growth Rate (Pre-Retirement)", value=0.02, format="%.4f", step=0.001, help=rate_help_text)
     in_living_costs_rate_post_retirement = st.number_input("Living Costs Growth Rate (Post-Retirement)", value=0.04, format="%.4f", step=0.001, help=rate_help_text)
+    in_slow_down_year = st.number_input("Slow Down Year (Lifestyling)", value=int(in_retirement_year) + 20, help="Year when spending slows down (e.g., age 75/80).")
+    in_living_costs_rate_post_slow_down = st.number_input("Living Costs Rate (Post-Slow Down)", value=0.0, format="%.4f", step=0.001, help="Rate after the slow down year (e.g., 0.0 for flat real spending).")
     in_salary_growth_rate = st.number_input("Salary Growth Rate", value=0.01, format="%.4f", step=0.001, help=rate_help_text)
     in_salary_growth_stop_year = st.number_input("Salary Growth Stop Year (Plateau)", value=int(in_retirement_year), help="Year after which salary stops growing. Set to Retirement Year for continuous growth.")
     in_salary_post_plateau_growth_rate = st.number_input("Salary Post-Plateau Rate", value=0.0, format="%.4f", step=0.001, help="Annual rate after the stop year. Use negative values (e.g. -0.01) for salary decline.")
@@ -102,6 +109,10 @@ with st.sidebar.form(key='simulation_params'):
     in_non_linear_utility = st.number_input("Non-Linear Utility Exponent", value=0.99, format="%.4f", step=0.01, help="Exponent for calculating actual utility from spending (e.g., 0.5 for sqrt).")
     in_utility_discount_rate = st.number_input("Utility Discount Rate (%/Year)", value=0.001, format="%.4f", step=0.0001, help=rate_help_text + " for NPV calculation.")
     in_volatility_penalty = st.number_input("Volatility Penalty", value=100000.0, format="%.0f", step=1000.0, help="Penalty factor for utility volatility (stdev/mean) in the final metric.")
+
+    # --- Stress Testing ---
+    st.subheader("Stress Testing")
+    in_stress_test_market_crash_pct = st.slider("Market Crash at Retirement (%)", min_value=0.0, max_value=0.5, value=0.0, step=0.05, help="Simulate a market drop in the year you retire.")
 
     # --- Troubleshooting ---
     st.subheader("Troubleshooting")
@@ -161,11 +172,15 @@ if submitted:
             "GIA_growth_rate": in_GIA_growth_rate,
             "living_costs_rate_pre_retirement": in_living_costs_rate_pre_retirement,
             "living_costs_rate_post_retirement": in_living_costs_rate_post_retirement,
+            "slow_down_year": int(in_slow_down_year),
+            "living_costs_rate_post_slow_down": in_living_costs_rate_post_slow_down,
             "salary_growth_rate": in_salary_growth_rate,
             "salary_growth_stop_year": int(in_salary_growth_stop_year),
             "salary_post_plateau_growth_rate": in_salary_post_plateau_growth_rate,
             "base_living_cost": in_base_living_cost,
             "base_salary": in_base_salary,
+            "state_pension_start_year": int(in_state_pension_start_year),
+            "state_pension_amount": in_state_pension_amount,
             "employee_pension_contributions_pct": in_employee_pension_contributions_pct,
             "employer_pension_contributions_pct": in_employer_pension_contributions_pct,
             "pension_lump_sum_spread_years": int(in_pension_lump_sum_spread_years),
@@ -176,6 +191,7 @@ if submitted:
             "non_linear_utility": in_non_linear_utility,
             "utility_discount_rate": in_utility_discount_rate,
             "volatility_penalty": in_volatility_penalty,
+            "stress_test_market_crash_pct": in_stress_test_market_crash_pct,
             "log_level": in_log_level,
             "one_off_expenses": one_off_expenses_dict,
             # Pass the checkbox state to the simulation function's save_debug_data param.

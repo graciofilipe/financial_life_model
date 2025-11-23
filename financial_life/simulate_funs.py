@@ -103,7 +103,9 @@ def simulate_a_life(args):
                                                           rate_post_retirement=args.living_costs_rate_post_retirement,
                                                           retirement_year=args.retirement_year,
                                                           final_year=args.final_year,
-                                                          one_off_expenses=one_off_expenses),
+                                                          one_off_expenses=one_off_expenses,
+                                                          slow_down_year=args.slow_down_year,
+                                                          rate_post_slow_down=args.living_costs_rate_post_slow_down),
                        non_linear_utility=args.non_linear_utility,
                        pension_draw_down_function=linear_pension_draw_down_function)
         log_debug_event(debug_data, args.start_year -1, "Init", "Start Cash", args.starting_cash)
@@ -144,6 +146,24 @@ def simulate_a_life(args):
     logging.info(f"Starting simulation loop from {args.start_year} to {args.final_year}")
     for year in range(args.start_year, args.final_year + 1):
         logging.info(f"--- Processing Year {year} ---")
+
+        # --- Stress Test: Market Crash Event ---
+        if year == args.retirement_year and args.stress_test_market_crash_pct > 0:
+            crash_factor = 1 - args.stress_test_market_crash_pct
+            log_debug_event(debug_data, year, "Stress Test", "Market Crash Initiated", f"-{args.stress_test_market_crash_pct*100}%")
+            
+            # Apply to volatile assets
+            my_pension.asset_value *= crash_factor
+            my_ISA.asset_value *= crash_factor
+            my_gia.asset_value *= crash_factor
+            # GIA unit price also drops? Or just value?
+            # If value drops, price drops.
+            my_gia.current_unit_price *= crash_factor
+            
+            log_debug_event(debug_data, year, "Stress Test", "Pension Value Post-Crash", my_pension.asset_value)
+            log_debug_event(debug_data, year, "Stress Test", "ISA Value Post-Crash", my_ISA.asset_value)
+            log_debug_event(debug_data, year, "Stress Test", "GIA Value Post-Crash", my_gia.asset_value)
+
 
         # --- Calculate Desired Utility ---
         step = "0. Utility Calc"
@@ -260,8 +280,13 @@ def simulate_a_life(args):
 
         # --- 4b. Main Tax Calculation Phase ---
         step = "4b. Main Tax Calc"
+        
+        # State Pension
+        state_pension_income = args.state_pension_amount if year >= args.state_pension_start_year else 0
+        log_debug_event(debug_data, year, step, "State Pension Income", state_pension_income)
+
         # Calculate Pension Allowance
-        income_for_allowance_check = taxable_salary + taxable_interest # Using taxable interest here
+        income_for_allowance_check = taxable_salary + taxable_interest + state_pension_income # Using taxable interest + state pension here
         log_debug_event(debug_data, year, step, "Income for Pension Allowance Check", income_for_allowance_check)
         pension_allowance = hmrc.pension_allowance(
             taxable_income_post_pension=income_for_allowance_check,
@@ -274,7 +299,7 @@ def simulate_a_life(args):
 
         # Calculate Total Taxable Income
         total_taxable_income = (taxable_salary + taxable_interest + pension_pay_over_allowance
-                                + taxable_pension_income + dividends)
+                                + taxable_pension_income + dividends + state_pension_income)
         log_debug_event(debug_data, year, step, "Total Taxable Income", total_taxable_income)
 
         # Calculate Income Tax
@@ -289,8 +314,9 @@ def simulate_a_life(args):
         assert ni_due >= 0, f"Year {year}: Negative NI ({ni_due})"
 
         # Calculate Net Income to Add to Cash
-        income_after_tax = (taxable_salary + taxable_pension_income - income_tax_due - ni_due)
-        log_debug_event(debug_data, year, step, "Net Income (Salary+Pension-Tax-NI)", income_after_tax)
+        # Note: State pension is added here. It is taxable but paid gross. Tax is deducted from the total liability above.
+        income_after_tax = (taxable_salary + taxable_pension_income + state_pension_income - income_tax_due - ni_due)
+        log_debug_event(debug_data, year, step, "Net Income (Salary+Pension+State-Tax-NI)", income_after_tax)
         filipe.put_in_cash(income_after_tax)
         log_debug_event(debug_data, year, step, "Cash Add (Net Income)", income_after_tax)
 
